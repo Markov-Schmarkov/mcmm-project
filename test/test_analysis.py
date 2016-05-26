@@ -11,7 +11,8 @@ def generate_random_stochastic_matrix():
 
 def test_find_stationary_distribution():
     matrix = generate_random_stochastic_matrix()
-    distrib = ana.find_stationary_distribution(matrix)
+    msm = ana.MarkovStateModel(matrix)
+    distrib = msm.stationary_distribution
     np.testing.assert_array_almost_equal(np.dot(matrix.T, distrib), distrib)
     np.testing.assert_almost_equal(np.linalg.norm(distrib), 1)
 
