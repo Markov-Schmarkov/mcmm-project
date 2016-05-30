@@ -2,6 +2,8 @@ r"""
 This module should handle the discretization by means of a kmeans or regspace clustering.
 """
 
+#TODO verify get_cluster_info labeling of clusters...
+
 from __future__ import division
 from random import sample
 import numpy as np
@@ -37,7 +39,7 @@ class KMeans(object):
         return self._cluster_centers
     @cluster_centers.setter
     def cluster_centers(self,value):
-        self.cluster_centers = value
+        self._cluster_centers = value
 
     @property
     def cluster_labels(self):
@@ -47,11 +49,12 @@ class KMeans(object):
         return self._cluster_labels
     @cluster_labels.setter
     def cluster_labels(self,value):
-        self.cluster_labels = value
+        self._cluster_labels = value
 
 
     def fit(self):
         '''
+        TODO putting returned values back inside properties
         '''
         if self.method == 'forgy':
             cluster_centers = forgy_centers(self.data,self.k)
@@ -59,8 +62,8 @@ class KMeans(object):
         counter = 0
 
         while counter < self.max_iter:
-            cluster_labels, cluster_dist = get_cluster_info(data,cluster_centers,metric=self.metric)
-            cluster_centers = set_new_cluster_centers(data,cluster_labels,self.k)
+            cluster_labels, cluster_dist = get_cluster_info(self.data,cluster_centers,metric=self.metric)
+            cluster_centers = set_new_cluster_centers(self.data,cluster_labels,self.k)
             counter = counter+1
             print counter
 
