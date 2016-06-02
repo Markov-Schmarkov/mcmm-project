@@ -3,7 +3,6 @@ This module should handle the discretization by means of a kmeans or regspace cl
 """
 
 #TODO verify get_cluster_info labeling of clusters...
-#TODO add break to fit() while loop
 
 from __future__ import division
 from random import sample
@@ -16,13 +15,14 @@ class KMeans(object):
     class providing simple k-Means clustering for (n,d)-shaped 2-dimensional ndarray objects containing float data
     '''
 
-    def __init__(self,data,k,max_iter=50,method='forgy',metric='euclidean',atol=1e-05,rtol=1e-08):
+    def __init__(self,data,k,max_iter=100,method='forgy',metric='euclidean',atol=1e-05,rtol=1e-08):
         '''
         input
         data: (n,d)-shaped 2-dimensional ndarray objects containing float data
         k: int, number of cluster centers. required to be <= n.
         max_iter: int, maximal iterations before terminating
         method: way of initializing cluster centers, default set to Forgy's method
+        metric: metric used to compute distances. for possible arguments see metric arguments of scipy.spatial.distance.cdist
         atol,rtol: absolute and relative tolerance threshold to stop iteration before reaching max_iter. see
         numpy.allclose documentation.
         '''
