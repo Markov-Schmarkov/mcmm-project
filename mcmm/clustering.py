@@ -2,7 +2,8 @@ r"""
 This module should handle the discretization by means of a kmeans or regspace clustering.
 """
 
-#TODO verify get_cluster_info labeling of clusters...
+#TODO kmeans++ cluster inititalization in addition to forgys method
+#TODO visualization api?
 
 from __future__ import division
 from random import sample
@@ -23,8 +24,7 @@ class KMeans(object):
         max_iter: int, maximal iterations before terminating
         method: way of initializing cluster centers, default set to Forgy's method
         metric: metric used to compute distances. for possible arguments see metric arguments of scipy.spatial.distance.cdist
-        atol,rtol: absolute and relative tolerance threshold to stop iteration before reaching max_iter. see
-        numpy.allclose documentation.
+        atol,rtol: absolute and relative tolerance threshold to stop iteration before reaching max_iter. see numpy.allclose documentation.
         '''
         self.k = k
         self.max_iter = max_iter
