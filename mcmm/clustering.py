@@ -3,6 +3,7 @@ This module should handle the discretization by means of a kmeans or regspace cl
 """
 
 #TODO verify get_cluster_info labeling of clusters...
+#TODO add break to fit() while loop
 
 from __future__ import division
 from random import sample
@@ -15,27 +16,30 @@ class KMeans(object):
     class providing simple k-Means clustering for (n,d)-shaped 2-dimensional ndarray objects containing float data
     '''
 
-    def __init__(self,data,k,max_iter=25,method='forgy',metric='euclidean'):
+    def __init__(self,data,k,max_iter=50,method='forgy',metric='euclidean',atol=1e-05,rtol=1e-08):
         '''
         input
         data: (n,d)-shaped 2-dimensional ndarray objects containing float data
         k: int, number of cluster centers. required to be <= n.
         max_iter: int, maximal iterations before terminating
         method: way of initializing cluster centers, default set to Forgy's method
+        atol,rtol: absolute and relative tolerance threshold to stop iteration before reaching max_iter. see
+        numpy.allclose documentation.
         '''
         self.k = k
         self.max_iter = max_iter
         self.data = data
         self.method = 'forgy'
         self.metric = 'euclidean'
+        self.rtol = rtol
+        self.atol = atol
         self._cluster_centers = None
         self._cluster_labels = None
 
     @property
     def cluster_centers(self):
-        if self.cluster_centers is None:
-            self.cluster_centers = self.fit()[0]
-            self.cluster_labels = self.fit()[1]
+        if self._cluster_centers is None:
+            self.fit()
         return self._cluster_centers
     @cluster_centers.setter
     def cluster_centers(self,value):
@@ -43,19 +47,14 @@ class KMeans(object):
 
     @property
     def cluster_labels(self):
-        if self.cluster_labels is None:
-            self.cluster_centers = self.fit()[0]
-            self.cluster_labels = self.fit()[1]
+        if self._cluster_labels is None:
+            self.fit()
         return self._cluster_labels
     @cluster_labels.setter
     def cluster_labels(self,value):
         self._cluster_labels = value
 
-
     def fit(self):
-        '''
-        TODO putting returned values back inside properties
-        '''
         if self.method == 'forgy':
             cluster_centers = forgy_centers(self.data,self.k)
 
@@ -63,11 +62,18 @@ class KMeans(object):
 
         while counter < self.max_iter:
             cluster_labels, cluster_dist = get_cluster_info(self.data,cluster_centers,metric=self.metric)
-            cluster_centers = set_new_cluster_centers(self.data,cluster_labels,self.k)
+            new_cluster_centers = set_new_cluster_centers(self.data,cluster_labels,self.k)
+            if np.allclose(cluster_centers,new_cluster_centers,self.atol,self.rtol):
+                print 'terminated by break condition.'
+                cluster_centers = new_cluster_centers
+                break
+            cluster_centers = new_cluster_centers
             counter = counter+1
-            print counter
 
-        return cluster_centers,cluster_labels
+
+        print '%s iterations until termination.'%str(counter)
+        self._cluster_centers = cluster_centers
+        self._cluster_labels = cluster_labels
 
 
 #--------------
