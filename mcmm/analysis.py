@@ -1,7 +1,8 @@
 r"""
 This module should handle the analysis of an estimated Markov state model.
 """
-
+from __future__ import absolute_import, division, print_function, unicode_literals
+__metaclass__ = type
 import numpy as np
 
 class Error(Exception):
@@ -25,12 +26,14 @@ class MarkovStateModel:
 
     @property
     def is_irreducible(self):
+        """Whether the markov chain is irreducible."""
         if self._is_irreducible is None:
             self._is_irreducible = (len(strongly_connected_components(self.transition_matrix)) == 1)
         return self._is_irreducible
 
     @property
     def transition_matrix(self):
+        """The transition matrix where entry (a,b) denotes transition probability a->b"""
         return self._transition_matrix
 
     @property
