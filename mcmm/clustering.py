@@ -5,7 +5,8 @@ This module should handle the discretization by means of a kmeans or regspace cl
 #TODO kmeans++ cluster inititalization in addition to forgys method
 #TODO visualization api?
 
-from __future__ import division
+from __future__ import absolute_import, division, print_function, unicode_literals
+__metaclass__ = type
 from random import sample
 import numpy as np
 from scipy.spatial import distance
@@ -64,14 +65,14 @@ class KMeans(object):
             cluster_labels, cluster_dist = get_cluster_info(self.data,cluster_centers,metric=self.metric)
             new_cluster_centers = set_new_cluster_centers(self.data,cluster_labels,self.k)
             if np.allclose(cluster_centers,new_cluster_centers,self.atol,self.rtol):
-                print 'terminated by break condition.'
+                print('terminated by break condition.')
                 cluster_centers = new_cluster_centers
                 break
             cluster_centers = new_cluster_centers
             counter = counter+1
 
 
-        print '%s iterations until termination.'%str(counter)
+        print('%s iterations until termination.'%str(counter))
         self._cluster_centers = cluster_centers
         self._cluster_labels = cluster_labels
 
@@ -103,7 +104,8 @@ def forgy_centers(data,k):
     '''
     returns k randomly chosen cluster centers from data
     '''
-    return sample(data,k)
+
+    return sample(list(data),k)
 
 def optimize_centroid(cluster_points):
     '''
