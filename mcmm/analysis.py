@@ -13,9 +13,15 @@ class InvalidOperation(Error):
 class MarkovStateModel:
 
     def __init__(self, transition_matrix):
+        """Create new Markov State Model.
+
+        Parameters:
+        transition_matrix: 2-dimensional numpy.ndarray where entry (a,b) contains transition probability a -> b
+        """
         self._transition_matrix = transition_matrix
         self._stationary_distribution = None
         self._is_irreducible = None
+        self._is_reversible = None
 
     @property
     def is_irreducible(self):
@@ -32,6 +38,21 @@ class MarkovStateModel:
         if self._stationary_distribution is None:
             self._stationary_distribution = self._find_stationary_distribution()
         return self._stationary_distribution
+
+    @property
+    def is_reversible(self):
+        if self._is_reversible is None:
+            self._is_reversible = self._determine_reversibility()
+        return self._is_reversible
+
+    def _determine_reversibility(self):
+        pi = self.stationary_distribution
+        T = self.transition_matrix
+        for i in range(len(T)):
+            for j in range(len(T)):
+                if not np.isclose(pi[i]*T[i,j], pi[j]*T[j,i]):
+                    return False
+        return True
 
     def _find_stationary_distribution(self):
         """Finds the stationary distribution of a given stochastic matrix.
