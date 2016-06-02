@@ -99,16 +99,6 @@ def get_cluster_info(data,cluster_centers,metric='euclidean'):
     cluster_dist = np.min(distance_matrix)
     return cluster_labels, cluster_dist
 
-def wcss(cluster_labels,cluster_dist,k):
-    '''
-    returns within-cluster-sum-of-squares in a (k,1) shaped vector for each cluster
-    '''
-    wcss_vec = []
-    for i in range(k):
-        ss = cluster_dist[cluster_labels == i]
-        wcss_vec.append(sum(ss**2))
-    return wcss_vec
-
 def forgy_centers(data,k):
     '''
     returns k randomly chosen cluster centers from data
