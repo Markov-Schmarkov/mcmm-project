@@ -41,6 +41,7 @@ class MarkovStateModel:
 
     @property
     def is_reversible(self):
+        """Whether the markov chain is reversible"""
         if self._is_reversible is None:
             self._is_reversible = self._determine_reversibility()
         return self._is_reversible
@@ -54,12 +55,30 @@ class MarkovStateModel:
                     return False
         return True
 
+    def _find_eigenvalues(self):
+        """Finds the eigenvalues of a given stochastic matrix.
+        The matrix is assumed to be irreducible.
+        """
+        if not self.is_irreducible:
+            raise InvalidOperation('Cannot compute eigenvalues of reducible Markov chain')
+        eigenvalues = np.linalg.eigvals(self.transition_matrix.T)
+        print(eigenvalues)
+
+    def _find_eigenvectors(self):
+        """Find the eigenvectors of a given stochastic matrix.
+        The matrix is assumed to be irreducible.
+        """
+        if not self.is_irreducible:
+            raise InvalidOperation('Cannot compute eigenvalues of reducible Markov chain')
+        eigenvalues, eigenvectors = np.linalg.eig(self.transition_matrix.T)
+        return eigenvectors
+
     def _find_stationary_distribution(self):
         """Finds the stationary distribution of a given stochastic matrix.
         The matrix is assumed to be irreducible.
         """
         if not self.is_irreducible:
-            raise InvalidOperation('Cannot compute stationary distribution of reducible markov chain')
+            raise InvalidOperation('Cannot compute stationary distribution of reducible Markov chain')
         eigenvalues, eigenvectors = np.linalg.eig(self.transition_matrix.T)
         norms = [np.absolute(v) for v in eigenvalues]
         i = np.argmax(norms)
