@@ -26,6 +26,8 @@ class MarkovStateModel:
     @property
     def transition_matrix(self):
         return self._transition_matrix
+    
+
 
     @property
     def stationary_distribution(self):
