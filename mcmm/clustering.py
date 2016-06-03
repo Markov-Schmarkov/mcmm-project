@@ -4,6 +4,7 @@ This module should handle the discretization by means of a kmeans or regspace cl
 
 #TODO kmeans++ cluster inititalization in addition to forgys method
 #TODO visualization api?
+#TODO add cluster distances to proerties and fit method
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 __metaclass__ = type
@@ -97,9 +98,10 @@ class KMeans(object):
     def fit_transform(self,add_data):
         '''
         Fits cluster centers based on given intial data PLUS additional data and returns centers, labeling and distances
+        of the complete data set
 
         NOTE: this method does not change the stored properties self.cluster_centers and self.cluster_labels
-        and is intended to examine changes of cluster information due to additional data possible.
+        and is intended to make examination of changes of cluster information due to additional data possible.
 
         Args:
             add_data: additional (n,d)-shaped 2-dimensional ndarray containing float data.
