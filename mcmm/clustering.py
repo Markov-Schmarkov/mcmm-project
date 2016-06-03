@@ -113,15 +113,19 @@ class KMeans(object):
 
         #TODO exception handling for dimension problems
 
-        if self.cluster_centers is None or self.cluster_labels is None:
-            self.fit()
+        #if self.cluster_centers is None or self.cluster_labels is None:
+        #    self.fit()
 
         data = np.vstack([self.data,add_data])
+
+        if self.method == 'forgy':
+            cluster_centers = forgy_centers(data, self.k)
+
         counter = 0
 
         while counter < self.max_iter:
-            cluster_labels, cluster_dist = get_cluster_info(self.data, cluster_centers, metric=self.metric)
-            new_cluster_centers = set_new_cluster_centers(self.data, cluster_labels, self.k)
+            cluster_labels, cluster_dist = get_cluster_info(data, cluster_centers, metric=self.metric)
+            new_cluster_centers = set_new_cluster_centers(data, cluster_labels, self.k)
             if np.allclose(cluster_centers, new_cluster_centers, self.atol, self.rtol):
                 print('terminated by break condition.')
                 cluster_centers = new_cluster_centers
