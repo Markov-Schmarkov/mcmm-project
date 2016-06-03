@@ -82,23 +82,53 @@ class KMeans(object):
 
     def transform(self,data):
         '''
-        When already fitted to initial data, returns cluster labeling for additional data corresponding
-        to existing cluster centers stored in the object.
+        Returns cluster labeling for additional data corresponding
+        to existing cluster centers stored in the object. (Also fits to initial data, if not fitted before)
         Args:
             data: (n,d)-shaped 2-dimensional ndarray
         Returns: cluster labels for passed data argument and cluster distances with respect to the given metric
         '''
 
+        if self.cluster_centers is None or self.cluster_labels is None:
+            self.fit()
+
         return get_cluster_info(data,self.cluster_centers,metric=self.metric)
 
-    def fit_transform(self,data):
+    def fit_transform(self,add_data):
         '''
-        (...)
+        Fits cluster centers based on given intial data PLUS additional data and returns centers, labeling and distances
+
+        NOTE: this method does not change the stored properties self.cluster_centers and self.cluster_labels
+        and is intended to examine changes of cluster information due to additional data possible.
+
         Args:
-            data:
+            add_data: additional (n,d)-shaped 2-dimensional ndarray containing float data.
+            The second dimension d has to match the second dimension of the inital data.
 
         Returns:
+            cluster centers, labeling and distances
         '''
+
+        #TODO exception handling for dimension problems
+
+        if self.cluster_centers is None or self.cluster_labels is None:
+            self.fit()
+
+        data = np.vstack([self.data,add_data])
+        counter = 0
+
+        while counter < self.max_iter:
+            cluster_labels, cluster_dist = get_cluster_info(self.data, cluster_centers, metric=self.metric)
+            new_cluster_centers = set_new_cluster_centers(self.data, cluster_labels, self.k)
+            if np.allclose(cluster_centers, new_cluster_centers, self.atol, self.rtol):
+                print('terminated by break condition.')
+                cluster_centers = new_cluster_centers
+                break
+            cluster_centers = new_cluster_centers
+            counter = counter + 1
+
+        print('%s iterations until termination.' % str(counter))
+        return cluster_centers, cluster_labels, cluster_dist
 
 #--------------
 #global functions
