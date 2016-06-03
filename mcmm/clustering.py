@@ -14,18 +14,18 @@ from scipy.spatial import distance
 
 class KMeans(object):
     '''
-    class providing simple k-Means clustering for (n,d)-shaped 2-dimensional ndarray objects containing float data
+    Class providing simple k-Means clustering for (n,d)-shaped 2-dimensional ndarray objects containing float data.
     '''
 
     def __init__(self,data,k,max_iter=100,method='forgy',metric='euclidean',atol=1e-05,rtol=1e-08):
         '''
-        input
-        data: (n,d)-shaped 2-dimensional ndarray objects containing float data
-        k: int, number of cluster centers. required to be <= n.
-        max_iter: int, maximal iterations before terminating
-        method: way of initializing cluster centers, default set to Forgy's method
-        metric: metric used to compute distances. for possible arguments see metric arguments of scipy.spatial.distance.cdist
-        atol,rtol: absolute and relative tolerance threshold to stop iteration before reaching max_iter. see numpy.allclose documentation.
+        Args:
+            data: (n,d)-shaped 2-dimensional ndarray objects containing float data
+            k: int, number of cluster centers. required to be <= n.
+            max_iter: int, maximal iterations before terminating
+            method: way of initializing cluster centers, default set to Forgy's method
+            metric: metric used to compute distances. for possible arguments see metric arguments of scipy.spatial.distance.cdist
+            atol,rtol: absolute and relative tolerance threshold to stop iteration before reaching max_iter. see numpy.allclose documentation.
         '''
         self.k = k
         self.max_iter = max_iter
@@ -56,6 +56,11 @@ class KMeans(object):
         self._cluster_labels = value
 
     def fit(self):
+        '''
+        Runs the clustering iteration on the data it was given when initialized.
+
+        Cluster centers and cluster labels for the given data will be stored in the objects properties.
+        '''
         if self.method == 'forgy':
             cluster_centers = forgy_centers(self.data,self.k)
 
@@ -71,11 +76,29 @@ class KMeans(object):
             cluster_centers = new_cluster_centers
             counter = counter+1
 
-
         print('%s iterations until termination.'%str(counter))
         self._cluster_centers = cluster_centers
         self._cluster_labels = cluster_labels
 
+    def transform(self,data):
+        '''
+        When already fitted to initial data, returns cluster labeling for additional data corresponding
+        to existing cluster centers stored in the object.
+        Args:
+            data: (n,d)-shaped 2-dimensional ndarray
+        Returns: cluster labels for passed data argument and cluster distances with respect to the given metric
+        '''
+
+        return get_cluster_info(data,self.cluster_centers,metric=self.metric)
+
+    def fit_transform(self,data):
+        '''
+        (...)
+        Args:
+            data:
+
+        Returns:
+        '''
 
 #--------------
 #global functions
@@ -84,16 +107,16 @@ class KMeans(object):
 
 def get_cluster_info(data,cluster_centers,metric='euclidean'):
     '''
-    for (n,d)-shaped float data and given centroids, returns the corresponding cluster centers
+    For (n,d)-shaped float data and given centroids, returns the corresponding cluster centers and corresponding labeling.
 
-    input
-    data: (n,d) ndarray
-    cluster_centers: (k,d) ndarray
-    metric: metric parameters used as in scipy.spatial.distance.cdist. uses euclidean metric as default.
+    Args:
+        data: (n,d) ndarray
+        cluster_centers: (k,d) ndarray
+        metric: metric parameters used as in scipy.spatial.distance.cdist. uses euclidean metric as default.
 
-    output
-    cluster_labels: (d,1) vector containing the corresponding cluster centers of each of the data rows
-    cluster_dist (d,1) vector containing squared distance of data observation to corresponding cluster centroid
+    Returns:
+        cluster_labels: (d,1) vector containing the corresponding cluster centers of each of the data rows
+        cluster_dist (d,1) vector containing squared distance of data observation to corresponding cluster centroid
     '''
     distance_matrix = distance.cdist(data,cluster_centers,metric)
     cluster_labels = np.argmin(distance_matrix,axis=1)
