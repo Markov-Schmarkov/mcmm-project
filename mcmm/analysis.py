@@ -27,7 +27,13 @@ class MarkovStateModel:
     def transition_matrix(self):
         return self._transition_matrix
     
+    # def period(self):
+        # """Returns the period of state i of the chain.
 
+        # Parameters:
+        # i: index of the state, the user wants to know the period of.
+        # """
+        # return self._transition_matrix[0,0]
 
     @property
     def stationary_distribution(self):
