@@ -99,7 +99,8 @@ class MarkovStateModel:
         norms = [np.absolute(v) for v in eigenvalues]
         i = np.argmax(norms)
         assert(np.isclose(eigenvalues[i], 1))
-        return eigenvectors[:,i]
+        v = eigenvectors[:,i]
+        return v/sum(v)
     
     def forward_committors(self, A, B):
         """Returns the vector of forward commitors from A to B"""
@@ -157,8 +158,6 @@ def strongly_connected_components(adjacency_matrix):
     for node in nodes:
         if not flags[node]:
             node_list += depth_first_search(adjacency_matrix, node, flags)
-    for n in nodes:
-        assert(flags[n])
     flags = [False] * len(nodes)
     components = []
     for node in reversed(node_list):
