@@ -20,9 +20,9 @@ class MarkovStateModel:
         transition_matrix: 2-dimensional numpy.ndarray where entry (a,b) contains transition probability a -> b
         """
         self._transition_matrix = transition_matrix
+        self._backward_transition_matrix = None
         self._stationary_distribution = None
         self._is_irreducible = None
-        self._is_reversible = None
 
     @property
     def is_irreducible(self):
@@ -35,6 +35,13 @@ class MarkovStateModel:
     def transition_matrix(self):
         """The transition matrix where entry (a,b) denotes transition probability a->b"""
         return self._transition_matrix
+    
+    @property
+    def backward_transition_matrix(self):
+        if self._backward_transition_matrix is None:
+            pi = self.stationary_distribution
+            self._backward_transition_matrix = self.transition_matrix.T * pi[np.newaxis,:] * (1/pi)[:,np.newaxis]
+        return self._backward_transition_matrix
     
     # def period(self):
         # """Returns the period of state i of the chain.
@@ -53,9 +60,7 @@ class MarkovStateModel:
     @property
     def is_reversible(self):
         """Whether the markov chain is reversible"""
-        if self._is_reversible is None:
-            self._is_reversible = self._determine_reversibility()
-        return self._is_reversible
+        return np.all(np.isclose(self.backward_transition_matrix, self.transition_matrix))
 
     def _determine_reversibility(self):
         pi = self.stationary_distribution
@@ -160,3 +165,4 @@ def strongly_connected_components(adjacency_matrix):
         if not flags[node]:
             components.append(depth_first_search(adjacency_matrix.T, node, flags))
     return components
+    

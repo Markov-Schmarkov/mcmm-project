@@ -1,7 +1,7 @@
 from mcmm import analysis as ana
 import numpy as np
 import random
-from nose.tools import assert_true, assert_equals, assert_raises
+from nose.tools import assert_true, assert_false, assert_equals, assert_raises
 
 def generate_random_stochastic_matrix(size=4):
     matrix = np.random.rand(size,size)+0.001
@@ -51,3 +51,23 @@ def test_forward_commitor():
         matrix[i] = row/sum(row)
     msm = ana.MarkovStateModel(matrix)
     np.testing.assert_array_almost_equal(msm.forward_committors([1], [2, 3]), [0.5, 0, 1, 1])
+
+def test_reversible():
+    matrix = np.array([
+        [ 0.9,  0.1,    0,    0],
+        [ 0.1, 0.89, 0.01,    0],
+        [   0, 0.01, 0.79,  0.2],
+        [   0,    0,  0.2,  0.8]
+    ])
+    msm = ana.MarkovStateModel(matrix)
+    assert_true(msm.is_reversible)
+
+def test_not_reversible():
+    matrix = np.array([
+        [ 0.9,  0.1,    0],
+        [   0,  0.9,  0.1],
+        [ 0.1,    0,  0.9]
+    ])
+    msm = ana.MarkovStateModel(matrix)
+    assert_false(msm.is_reversible)
+
