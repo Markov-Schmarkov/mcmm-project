@@ -1,6 +1,7 @@
 from mcmm import analysis as ana
 import numpy as np
 import random
+import unittest
 from nose.tools import assert_true, assert_false, assert_equals, assert_raises
 
 def generate_random_stochastic_matrix(size=4):
@@ -65,6 +66,19 @@ def test_forward_commitor():
         matrix[i] = row/sum(row)
     msm = ana.MarkovStateModel(matrix)
     np.testing.assert_array_almost_equal(msm.forward_committors([1], [2, 3]), [0.5, 0, 1, 1])
+
+
+def test_backward_commitor():
+    matrix = np.random.rand(3,3)
+    matrix[1,2] = matrix[2,1]
+    matrix[1,1] = matrix[2,2]
+    matrix[1,0] = matrix[2,0]
+    matrix[0,1] = matrix[0,2]
+    for i, row in enumerate(matrix):
+        matrix[i] = row/sum(row)
+    msm = ana.MarkovStateModel(matrix)
+    np.testing.assert_array_almost_equal(msm.backward_commitors([1], [2]), [0.5, 1, 0])
+
 
 def test_reversible():
     matrix = np.array([

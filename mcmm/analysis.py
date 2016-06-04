@@ -103,9 +103,17 @@ class MarkovStateModel:
     
     def forward_committors(self, A, B):
         """Returns the vector of forward commitors from A to B"""
-        n = len(self.transition_matrix)
+        return self._commitors(A, B, self.transition_matrix)
+    
+    def backward_commitors(self, A, B):
+        """Returns the vector of backward commitors from A to B"""
+        return self._commitors(B, A, self.backward_transition_matrix)
+
+    def _commitors(self, A, B, T):
+        """Returns the vector of forward commitors from A to B given propagator T"""
+        n = len(T)
         C = list(set(range(n)) - set().union(A, B))
-        M = self.transition_matrix - np.identity(n)
+        M = T - np.identity(n)
         d = np.sum(M[np.ix_(C, B)], axis=1)
         solution = np.linalg.solve(M[np.ix_(C, C)], -d)
         result = np.empty(n)
@@ -119,7 +127,6 @@ class MarkovStateModel:
                 result[i] = solution[c]
                 c += 1
         return result
-        
 
 
 def depth_first_search(adjacency_matrix, root, flags):
