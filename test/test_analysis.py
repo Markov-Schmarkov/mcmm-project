@@ -30,7 +30,7 @@ def test_find_stationary_distribution_periodic():
 
 
 def test_find_stationary_distribution_raises():
-    matrix = np.zeros(shape=(3, 3))
+    matrix = np.identity(3)
     msm = ana.MarkovStateModel(matrix)
     with assert_raises(ana.InvalidOperation):
         distrib = msm.stationary_distribution

@@ -11,6 +11,9 @@ class Error(Exception):
 class InvalidOperation(Error):
     """An operation was called on a object that does not support it."""
 
+class InvalidValue(Error):
+    """A function was called with an invalid argument."""
+
 class MarkovStateModel:
 
     def __init__(self, transition_matrix):
@@ -19,6 +22,8 @@ class MarkovStateModel:
         Parameters:
         transition_matrix: 2-dimensional numpy.ndarray where entry (a,b) contains transition probability a -> b
         """
+        if not self.is_stochastic_matrix(transition_matrix):
+            raise InvalidValue('Transition matrix must be stochastic')
         self._transition_matrix = transition_matrix
         self._backward_transition_matrix = None
         self._stationary_distribution = None
@@ -109,7 +114,8 @@ class MarkovStateModel:
         """Returns the vector of backward commitors from A to B"""
         return self._commitors(B, A, self.backward_transition_matrix)
 
-    def _commitors(self, A, B, T):
+    @staticmethod
+    def _commitors(A, B, T):
         """Returns the vector of forward commitors from A to B given propagator T"""
         n = len(T)
         C = list(set(range(n)) - set().union(A, B))
@@ -128,6 +134,10 @@ class MarkovStateModel:
                 c += 1
         return result
 
+    @staticmethod
+    def is_stochastic_matrix(A):
+        return np.all(0 <= A) and np.all(A <= 1) and np.allclose(np.sum(A, axis=1), 1)
+    
 
 def depth_first_search(adjacency_matrix, root, flags):
     """Performs depth-first search on a digraph.
