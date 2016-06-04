@@ -3,8 +3,8 @@ import numpy as np
 import random
 from nose.tools import assert_true, assert_equals, assert_raises
 
-def generate_random_stochastic_matrix():
-    matrix = np.random.rand(4,4)+0.001
+def generate_random_stochastic_matrix(size=4):
+    matrix = np.random.rand(size,size)+0.001
     for i, row in enumerate(matrix):
         matrix[i] = row/sum(row)
     return matrix
@@ -43,3 +43,11 @@ def test_strongly_connected_components():
             for v2 in c2:
                 assert_true(matrix[v1,v2] == 0 or matrix[v2,v1] == 0)
     assert_equals(set(range(nodes)), set().union(*components))
+    
+def test_forward_commitor():
+    matrix = np.random.rand(4,4)
+    matrix[0,1] = matrix[0,2] + matrix[0,3]
+    for i, row in enumerate(matrix):
+        matrix[i] = row/sum(row)
+    msm = ana.MarkovStateModel(matrix)
+    np.testing.assert_array_almost_equal(msm.forward_committors([1], [2, 3]), [0.5, 0, 1, 1])
