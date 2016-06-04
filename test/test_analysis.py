@@ -14,8 +14,18 @@ def test_find_stationary_distribution():
     matrix = generate_random_stochastic_matrix()
     msm = ana.MarkovStateModel(matrix)
     distrib = msm.stationary_distribution
-    np.testing.assert_array_almost_equal(np.dot(matrix.T, distrib), distrib)
-    np.testing.assert_almost_equal(np.sum(distrib), 1)
+    np.testing.assert_allclose(matrix.T.dot(distrib), distrib)
+    np.testing.assert_allclose(np.sum(distrib), 1)
+
+
+def test_find_stationary_distribution_periodic():
+    matrix = np.array([
+        [0, 1, 0],
+        [0, 0, 1],
+        [1, 0, 0]
+    ])
+    msm = ana.MarkovStateModel(matrix)
+    np.testing.assert_allclose(msm.stationary_distribution, [1/3, 1/3, 1/3])
 
 
 def test_find_stationary_distribution_raises():

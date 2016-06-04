@@ -60,7 +60,7 @@ class MarkovStateModel:
     @property
     def is_reversible(self):
         """Whether the markov chain is reversible"""
-        return np.all(np.isclose(self.backward_transition_matrix, self.transition_matrix))
+        return np.allclose(self.backward_transition_matrix, self.transition_matrix)
 
     def _determine_reversibility(self):
         pi = self.stationary_distribution
@@ -97,9 +97,8 @@ class MarkovStateModel:
             raise InvalidOperation('Cannot compute stationary distribution of reducible Markov chain')
         eigenvalues, eigenvectors = np.linalg.eig(self.transition_matrix.T)
         norms = [np.absolute(v) for v in eigenvalues]
-        i = np.argmax(norms)
-        assert(np.isclose(eigenvalues[i], 1))
-        v = eigenvectors[:,i]
+        v = eigenvectors[:,np.isclose(eigenvalues, 1)].squeeze()
+        assert(len(v.shape) == 1)
         return v/sum(v)
     
     def forward_committors(self, A, B):
