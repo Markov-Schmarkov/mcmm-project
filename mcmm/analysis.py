@@ -95,6 +95,26 @@ class MarkovStateModel:
         i = np.argmax(norms)
         assert(np.isclose(eigenvalues[i], 1))
         return eigenvectors[:,i]
+    
+    def forward_committors(self, A, B):
+        """Returns the vector of forward commitors from A to B"""
+        n = len(self.transition_matrix)
+        C = list(set(range(n)) - set().union(A, B))
+        M = self.transition_matrix - np.identity(n)
+        d = np.sum(M[np.ix_(C, B)], axis=1)
+        solution = np.linalg.solve(M[np.ix_(C, C)], -d)
+        result = np.empty(n)
+        c = 0
+        for i in range(n):
+            if i in A:
+                result[i] = 0
+            elif i in B:
+                result[i] = 1
+            else:
+                result[i] = solution[c]
+                c += 1
+        return result
+        
 
 
 def depth_first_search(adjacency_matrix, root, flags):
