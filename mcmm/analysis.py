@@ -28,6 +28,8 @@ class MarkovStateModel:
         self._backward_transition_matrix = None
         self._stationary_distribution = None
         self._is_irreducible = None
+        self._eigenvalues = None
+        self._left_eigenvectors = None
 
     @property
     def is_irreducible(self):
@@ -48,13 +50,16 @@ class MarkovStateModel:
             self._backward_transition_matrix = self.transition_matrix.T * pi[np.newaxis,:] * (1/pi)[:,np.newaxis]
         return self._backward_transition_matrix
     
-    # def period(self):
-        # """Returns the period of state i of the chain.
-
-        # Parameters:
-        # i: index of the state, the user wants to know the period of.
-        # """
-        # return self._transition_matrix[0,0]
+    @property
+    def period(self):
+        """Returns the period of the markov chain."""
+        if not self.is_irreducible:
+            raise InvalidOperation('Cannot compute period of reducible Markov chain')
+        eigenvalues, _ = self._left_eigen()
+        norms = np.absolute(eigenvalues)
+        period = np.count_nonzero(np.isclose(norms, 1))
+        assert(period >= 1)
+        return period
 
     @property
     def stationary_distribution(self):
@@ -67,32 +72,15 @@ class MarkovStateModel:
         """Whether the markov chain is reversible"""
         return np.allclose(self.backward_transition_matrix, self.transition_matrix)
 
-    def _determine_reversibility(self):
-        pi = self.stationary_distribution
-        T = self.transition_matrix
-        for i in range(len(T)):
-            for j in range(len(T)):
-                if not np.isclose(pi[i]*T[i,j], pi[j]*T[j,i]):
-                    return False
-        return True
-
-    def _find_eigenvalues(self):
-        """Finds the eigenvalues of a given stochastic matrix.
-        The matrix is assumed to be irreducible.
+    def _left_eigen(self):
+        """Finds the eigenvalues and left eigenvectors of the transition matrix.
+        
+        Returns: (eigenvalues, eigenvectors)
+            where eigenvalues[i] corresponds to eigenvectors[:,i]
         """
-        if not self.is_irreducible:
-            raise InvalidOperation('Cannot compute eigenvalues of reducible Markov chain')
-        eigenvalues = np.linalg.eigvals(self.transition_matrix.T)
-        print(eigenvalues)
-
-    def _find_eigenvectors(self):
-        """Find the eigenvectors of a given stochastic matrix.
-        The matrix is assumed to be irreducible.
-        """
-        if not self.is_irreducible:
-            raise InvalidOperation('Cannot compute eigenvalues of reducible Markov chain')
-        eigenvalues, eigenvectors = np.linalg.eig(self.transition_matrix.T)
-        return eigenvectors
+        if not self._left_eigenvectors:
+            self._eigenvalues, self._left_eigenvectors = np.linalg.eig(self.transition_matrix.T)
+        return (self._eigenvalues, self._left_eigenvectors)
 
     def _find_stationary_distribution(self):
         """Finds the stationary distribution of a given stochastic matrix.
@@ -100,8 +88,7 @@ class MarkovStateModel:
         """
         if not self.is_irreducible:
             raise InvalidOperation('Cannot compute stationary distribution of reducible Markov chain')
-        eigenvalues, eigenvectors = np.linalg.eig(self.transition_matrix.T)
-        norms = [np.absolute(v) for v in eigenvalues]
+        eigenvalues, eigenvectors = self._left_eigen()
         v = eigenvectors[:,np.isclose(eigenvalues, 1)].squeeze()
         assert(len(v.shape) == 1)
         return v/sum(v)
