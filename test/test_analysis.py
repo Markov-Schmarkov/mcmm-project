@@ -100,3 +100,101 @@ def test_not_reversible():
     msm = ana.MarkovStateModel(matrix)
     assert_false(msm.is_reversible)
 
+# Periodicity tests
+# These should be aperiodic
+def test_aperiodic_normal():
+    matrix = np.array([
+        [ 0.9,  0.1,    0,    0],
+        [ 0.1, 0.89, 0.01,    0],
+        [   0, 0.01, 0.79,  0.2],
+        [   0,    0,  0.2,  0.8]
+    ])
+    msm = ana.MarkovStateModel(matrix)
+    assert_true(msm.is_aperiodic())
+
+def test_aperiodic_gcd():
+    matrix = np.array([
+        [ 0, 1, 0, 0],
+        [ 0.1, 0, 0.9, 0],
+        [ 0, 0, 0, 1],
+        [ 0, 1, 0, 0]
+    ])
+    msm = ana.MarkovStateModel(matrix)
+    assert_true(msm.is_aperiodic())
+
+def test_aperiodic_path():
+    matrix = np.array([
+        [0, 1, 0, 0, 0],
+        [0.5, 0, 0.5, 0, 0],
+        [0, 0.5, 0, 0.5, 0],
+        [0, 0, 0.5, 0, 0.5],
+        [0, 0, 0, 0.9, 0.1]
+    ])
+    msm = ana.MarkovStateModel(matrix)
+    assert_true(msm.is_aperiodic())
+    
+def test_one_self_returning_state():
+    matrix = np.array([
+        [0.5, 0.5, 0, 0],
+        [0, 0, 1, 0],
+        [0, 0, 0, 1],
+        [1, 0, 0, 0]
+    ])
+    msm = ana.MarkovStateModel(matrix)
+    assert_true(msm.is_aperiodic())
+    
+def test_one_self_returning_state_reducible():
+    matrix = np.array([
+        [0.5, 0.5, 0, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0],
+        [1, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0.5, 0.5],
+        [0, 0, 0, 0, 0.5, 0.5]
+    ])
+    msm = ana.MarkovStateModel(matrix)
+    assert_true(msm.is_aperiodic())
+
+# These should be periodic
+def test_periodic_circle():
+    matrix = np.array([
+        [0, 1, 0],
+        [0, 0, 1],
+        [1, 0, 0]
+    ])
+    msm = ana.MarkovStateModel(matrix)
+    assert_false(msm.is_aperiodic())
+    
+def test_periodic_path():
+    matrix = np.array([
+        [0, 1, 0, 0, 0],
+        [0.5, 0, 0.5, 0, 0],
+        [0, 0.5, 0, 0.5, 0],
+        [0, 0, 0.5, 0, 0.5],
+        [0, 0, 0, 1, 0]
+    ])
+    msm = ana.MarkovStateModel(matrix)
+    assert_false(msm.is_aperiodic())
+    
+def test_periodic_reducible():
+    matrix = np.array([
+        [0.5, 0.5, 0, 0, 0],
+        [0.5, 0.5, 0, 0, 0],
+        [0, 0, 0, 1, 0],
+        [0, 0, 0, 0, 1],
+        [0, 0, 1, 0, 0]
+    ])
+    msm = ana.MarkovStateModel(matrix)
+    assert_false(msm.is_aperiodic())
+
+def test_transient_state():
+    matrix = np.array([
+        [0, 0.5, 0.5, 0, 0],
+        [0, 0.5, 0.5, 0, 0],
+        [0, 0, 0, 1, 0],
+        [0, 0, 0, 0, 1],
+        [0, 1, 0, 0, 0]
+    ])
+    msm = ana.MarkovStateModel(matrix)
+    assert_false(msm.is_aperiodic())
+# End periodicity tests
