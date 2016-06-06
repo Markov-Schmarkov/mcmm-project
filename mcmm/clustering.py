@@ -5,6 +5,9 @@ This module should handle the discretization by means of a kmeans or regspace cl
 #TODO kmeans++ cluster inititalization in addition to forgys method
 #TODO visualization api?
 #TODO add cluster distances to proerties and fit method
+#TODO exception handling
+
+#TODO algorithm for fit_transform breaks for n normal distributions and n-1 clusters. WHY
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 __metaclass__ = type
@@ -37,6 +40,7 @@ class KMeans(object):
         self.atol = atol
         self._cluster_centers = None
         self._cluster_labels = None
+        self._cluster_dist = None
 
     @property
     def cluster_centers(self):
@@ -55,6 +59,15 @@ class KMeans(object):
     @cluster_labels.setter
     def cluster_labels(self,value):
         self._cluster_labels = value
+
+    @property
+    def cluster_dist(self):
+        if self._cluster_dist is None:
+            self.fit()
+        return self._cluster_dist
+    @cluster_dist.setter
+    def cluster_dist(self,value):
+        self._cluster_dist = value
 
     def fit(self):
         '''
@@ -77,9 +90,12 @@ class KMeans(object):
             cluster_centers = new_cluster_centers
             counter = counter+1
 
+
+        cluster_labels, cluster_dist = get_cluster_info(self.data,cluster_centers,metric=self.metric)
         print('%s iterations until termination.'%str(counter))
         self._cluster_centers = cluster_centers
         self._cluster_labels = cluster_labels
+        self._cluster_dist = cluster_dist
 
     def transform(self,data):
         '''
@@ -114,15 +130,16 @@ class KMeans(object):
         #TODO exception handling for dimension problems
 
         #if self.cluster_centers is None or self.cluster_labels is None:
-        #    self.fit()
+        #   self.fit()
 
         data = np.vstack([self.data,add_data])
 
         if self.method == 'forgy':
             cluster_centers = forgy_centers(data, self.k)
 
-        counter = 0
 
+        counter = 0
+        print('additional data fit:')
         while counter < self.max_iter:
             cluster_labels, cluster_dist = get_cluster_info(data, cluster_centers, metric=self.metric)
             new_cluster_centers = set_new_cluster_centers(data, cluster_labels, self.k)
@@ -133,6 +150,7 @@ class KMeans(object):
             cluster_centers = new_cluster_centers
             counter = counter + 1
 
+        cluster_labels, cluster_dist = get_cluster_info(data, cluster_centers, metric=self.metric)
         print('%s iterations until termination.' % str(counter))
         return cluster_centers, cluster_labels, cluster_dist
 
@@ -156,7 +174,7 @@ def get_cluster_info(data,cluster_centers,metric='euclidean'):
     '''
     distance_matrix = distance.cdist(data,cluster_centers,metric)
     cluster_labels = np.argmin(distance_matrix,axis=1)
-    cluster_dist = np.min(distance_matrix)
+    cluster_dist = np.min(distance_matrix,axis=1)
     return cluster_labels, cluster_dist
 
 def forgy_centers(data,k):
@@ -165,6 +183,7 @@ def forgy_centers(data,k):
     '''
 
     return sample(list(data),k)
+
 
 def optimize_centroid(cluster_points):
     '''
