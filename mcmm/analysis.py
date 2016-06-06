@@ -47,10 +47,9 @@ class MarkovStateModel:
     def is_aperiodic(self):
         """Whether the markov chain is aperiodic."""
         if self._is_aperiodic is None:
-            self._is_aperiodic = self._determine_aperiodicity
+            self._is_aperiodic = self._determine_aperiodicity()
         return self._is_aperiodic
-            
-    #@property
+    
     def _determine_aperiodicity(self):
         period = -1
         irred = self.is_irreducible                                     # remember, if chain is irreducible
