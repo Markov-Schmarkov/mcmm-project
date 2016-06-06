@@ -4,16 +4,16 @@ import random
 import unittest
 from nose.tools import assert_true, assert_false, assert_equals, assert_raises
 
-def generate_random_stochastic_matrix(size=4):
-    matrix = np.random.rand(size,size)+0.001
+
+def make_stochastic(matrix):
     for i, row in enumerate(matrix):
         matrix[i] = row/sum(row)
     return matrix
 
 
 def test_find_stationary_distribution():
-    matrix = generate_random_stochastic_matrix()
-    msm = ana.MarkovStateModel(matrix)
+    matrix = np.random.rand(4, 4) + 0.001
+    msm = ana.MarkovStateModel(make_stochastic(matrix))
     distrib = msm.stationary_distribution
     np.testing.assert_allclose(matrix.T.dot(distrib), distrib)
     np.testing.assert_allclose(np.sum(distrib), 1)
@@ -62,9 +62,7 @@ def test_strongly_connected_components():
 def test_forward_commitor():
     matrix = np.random.rand(4,4)
     matrix[0,1] = matrix[0,2] + matrix[0,3]
-    for i, row in enumerate(matrix):
-        matrix[i] = row/sum(row)
-    msm = ana.MarkovStateModel(matrix)
+    msm = ana.MarkovStateModel(make_stochastic(matrix))
     np.testing.assert_array_almost_equal(msm.forward_committors([1], [2, 3]), [0.5, 0, 1, 1])
 
 
@@ -74,9 +72,7 @@ def test_backward_commitor():
     matrix[1,1] = matrix[2,2]
     matrix[1,0] = matrix[2,0]
     matrix[0,1] = matrix[0,2]
-    for i, row in enumerate(matrix):
-        matrix[i] = row/sum(row)
-    msm = ana.MarkovStateModel(matrix)
+    msm = ana.MarkovStateModel(make_stochastic(matrix))
     np.testing.assert_array_almost_equal(msm.backward_commitors([1], [2]), [0.5, 1, 0])
 
 
@@ -99,6 +95,24 @@ def test_not_reversible():
     ])
     msm = ana.MarkovStateModel(matrix)
     assert_false(msm.is_reversible)
+
+
+def test_periodic():
+    matrix = np.array([
+        [0, 1, 0],
+        [0, 0, 1],
+        [1, 0, 0]
+    ])
+    msm = ana.MarkovStateModel(matrix)
+    assert_equals(msm.period, 3)
+
+
+def test_aperiodic():
+    matrix = np.random.rand(4, 4) + 0.001
+    matrix[0,0] = 0.1
+    msm = ana.MarkovStateModel(make_stochastic(matrix))
+    assert_equals(msm.period, 1)
+
 
 # Periodicity tests
 # These should be aperiodic
@@ -198,3 +212,4 @@ def test_transient_state():
     msm = ana.MarkovStateModel(matrix)
     assert_false(msm.is_aperiodic())
 # End periodicity tests
+
