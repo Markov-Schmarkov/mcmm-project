@@ -9,7 +9,7 @@ import numpy as np
 
 def transition_matrix_from_count_matrix(count_matrix):
     row_sums = count_matrix.sum(axis=1)
-    count_matrix /= row_sums[:, np.newaxis]
+    count_matrix = count_matrix / row_sums[:, np.newaxis]
     return count_matrix
 
 
