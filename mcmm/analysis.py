@@ -4,7 +4,6 @@ This module should handle the analysis of an estimated Markov state model.
 from __future__ import absolute_import, division, print_function, unicode_literals
 __metaclass__ = type
 import numpy as np
-from math import gcd
 
 class Error(Exception):
     """Base class for all exceptions raised by the mcmm module."""
@@ -57,7 +56,7 @@ class MarkovStateModel:
             pos = np.zeros(self._num_states)
             pos[s] = 1                                                  # we are only in state s right at the start
             for i in range(1, 2*self._num_states):                      # we need to check all paths of length <= 2|S| - 1
-                pos = pos @ self._transition_matrix                     # propagate
+                pos = pos.dot(self._transition_matrix)                     # propagate
                 pos[:] = pos[:] > 0                                     # normalize to avoid too small entries
                 if pos[s] == 1:
                     period = gcd(i, period) if not period == -1 else i  # period of this state = gcd of all path lengths
@@ -201,3 +200,7 @@ def strongly_connected_components(adjacency_matrix):
             components.append(depth_first_search(adjacency_matrix.T, node, flags))
     return components
     
+def gcd(a, b):
+    while b != 0:
+        b, a = a%b, b
+    return a
