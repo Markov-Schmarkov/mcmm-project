@@ -29,4 +29,12 @@ def transition_matrix_from_count_matrix(count_matrix):
 
 
 def reversible_transition_matrix_from_count_matrix(count_matrix):
-    raise NotImplementedError()
+    matrix = transition_matrix_from_count_matrix(count_matrix)
+    matrix_next = np.zeros(matrix.shape)
+    while not np.allclose(matrix, matrix_next, rtol=0.01):
+        for i,j in np.ndindex(*count_matrix.shape):
+            d_i = count_matrix[i,:].sum() / matrix[i,:].sum()
+            d_j = count_matrix[j,:].sum() / matrix[j,:].sum()
+            matrix_next[i,j] = (count_matrix[i,j] + count_matrix[j,i])/(d_i + d_j)
+        matrix, matrix_next = matrix_next, matrix
+    return matrix_next
