@@ -45,7 +45,7 @@ def test_simple_markov():
         else:
             cluster_labels[i] = 2
     estimator = est.Estimator(cluster_labels, 1, 1)
-    assert_equals(int(50*np.linalg.norm(estimator.transition_matrix - A)),0)
+    np.testing.assert_allclose(estimator.transition_matrix, A, atol=0.05, rtol=0.1)
 
 
 def test_transition_matrix():
