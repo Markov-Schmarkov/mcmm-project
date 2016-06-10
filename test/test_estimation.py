@@ -26,6 +26,26 @@ def test_compute_counting_matrix():
     a = np.array([0,1,0,1,1,0,0,0,1,0])
     matrix = est.count_matrix_from_cluster_labels_using_sliding_window(a, 4, 6, 2)
     assert_array_equal(np.array([[0,1],[0,0]]), matrix)
+    
+def test_simple_markov():
+    """This test generates data based on a small Markov model
+    and tests the resulting transition matrix against the original transition matrix
+    """
+    A = np.array([[0.5,0.3,0.2],[0.2,0.6,0.2],[0.1,0.05,0.85]])
+    n = 50000
+    cluster_labels = np.zeros(n)
+    cluster_labels[0] = 1;
+    for i in range(1,n):
+        zahl = np.random.rand(1)
+        if zahl < A[cluster_labels[i-1],0]:
+            cluster_labels[i] = 0
+        elif zahl < A[cluster_labels[i-1],0] + A[cluster_labels[i-1],1]:
+            cluster_labels[i] = 1
+        else:
+            cluster_labels[i] = 2
+    count_matrix = est.count_matrix_from_cluster_labels_using_sliding_window(cluster_labels,1,1,3)
+    transition_matrix = est.transition_matrix_from_count_matrix(count_matrix)
+    assert_equals(int(50*np.linalg.norm(transition_matrix - A)),0)
 
 def test_transition_matrix():
     count_matrix = np.random.randint(0, 1000, (10, 10))
