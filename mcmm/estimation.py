@@ -23,9 +23,7 @@ def count_matrix_from_cluster_labels_using_sliding_window(cluster_labels, lag_ti
     return count_matrix	
 
 def transition_matrix_from_count_matrix(count_matrix):
-    row_sums = count_matrix.sum(axis=1)
-    count_matrix = count_matrix / row_sums[:, np.newaxis]
-    return count_matrix
+    return make_stochastic(count_matrix)
 
 
 def reversible_transition_matrix_from_count_matrix(count_matrix):
@@ -37,4 +35,9 @@ def reversible_transition_matrix_from_count_matrix(count_matrix):
             d_j = count_matrix[j,:].sum() / matrix[j,:].sum()
             matrix_next[i,j] = (count_matrix[i,j] + count_matrix[j,i])/(d_i + d_j)
         matrix, matrix_next = matrix_next, matrix
-    return matrix_next
+    return make_stochastic(matrix)
+
+def make_stochastic(matrix):
+    row_sums = matrix.sum(axis=1)
+    return matrix / row_sums[:, np.newaxis]
+

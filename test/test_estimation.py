@@ -1,4 +1,4 @@
-from mcmm import estimation as est
+from mcmm import estimation as est, analysis as ana
 import numpy as np
 import random
 import unittest
@@ -58,3 +58,10 @@ def test_transition_matrix():
         row_sum = sum(count_matrix[i,:])
         for j in range(len(count_matrix)):
             np.testing.assert_allclose(transition_matrix[i,j], count_matrix[i,j]/row_sum)
+
+def test_transition_matrix_reversible():
+    count_matrix = np.random.randint(0, 1000, (4, 4))
+    transition_matrix = est.reversible_transition_matrix_from_count_matrix(count_matrix)
+    msm = ana.MarkovStateModel(transition_matrix)
+    assert_true(msm.is_reversible)
+
