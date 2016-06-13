@@ -2,18 +2,14 @@ r"""
 This module should handle the discretization by means of a kmeans or regspace clustering.
 """
 
-#TODO kmeans++ cluster inititalization in addition to forgys method
-#TODO visualization api?
-#TODO add cluster distances to proerties and fit method
 #TODO exception handling
-
-#TODO algorithm for fit_transform breaks for n normal distributions and n-1 clusters. WHY
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 __metaclass__ = type
 from random import sample
 import numpy as np
 from scipy.spatial import distance
+from scipy.stats import rv_discrete
 
 class KMeans(object):
     '''
@@ -202,7 +198,6 @@ def initialize_centers(data,k,method):
         cluster_centers = forgy_centers(data,k)
     elif method == 'kmeans++':
         cluster_centers = kmeans_plusplus_centers(data,k)
-
     return cluster_centers
 
 #---------
@@ -213,7 +208,6 @@ def forgy_centers(data,k):
     '''
     returns k randomly chosen cluster centers from data
     '''
-
     return sample(list(data),k)
 
 def kmeans_plusplus_centers(data,k):
@@ -222,26 +216,30 @@ def kmeans_plusplus_centers(data,k):
     see http://ilpubs.stanford.edu:8090/778/1/2006-13.pdf
     '''
 
+    index_vals = range(len(data)-1)
+    center_list = []
     c1 = sample(list(data),1)
-
     if k == 1:
         return c1
+    center_list.append(c1)
+    while len(center_list)<k:
+        distances = get_cluster_info(np.asmatrix(data),np.asmatrix(center_list))
+        D2 = D2_weighting(distances)
+        distribution = rv_discrete(values=(index_vals,D2))
+        center_choice = data[distribution.rvs(size=1),:]
+        center_list.append(center_choice)
+    return np.array(center_list)
 
-    #TODO
-    return None
-
-def get_closest_distance(point,center_list):
+def D2_weighting(dist_array):
     '''
-    for a datapoint, get the distance to closest center from center_list
-    this function is needed for kmeans++ initialization
+    performs the D^2-probability weighting on an ndarray of cluster distances associated to data points,
+    see http://ilpubs.stanford.edu:8090/778/1/2006-13.pdf
+    returns kmeans++ probability distribution vector
     '''
-
-    distances = distance.cdist(np.asmatrix(point),center_list)
-    min = np.min(distances)
-    return min
-
-
-
+    D2 = dist_array**2
+    sum = np.sum(D2)
+    D2 = D2/sum
+    return D2
 
 
 
