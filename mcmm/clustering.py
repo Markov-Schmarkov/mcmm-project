@@ -15,7 +15,6 @@ from random import sample
 import numpy as np
 from scipy.spatial import distance
 
-
 class KMeans(object):
     '''
     Class providing simple k-Means clustering for (n,d)-shaped 2-dimensional ndarray objects containing float data.
@@ -34,8 +33,8 @@ class KMeans(object):
         self.k = k
         self.max_iter = max_iter
         self.data = data
-        self.method = 'forgy'
-        self.metric = 'euclidean'
+        self.method = method
+        self.metric = metric
         self.rtol = rtol
         self.atol = atol
         self._cluster_centers = None
@@ -75,8 +74,8 @@ class KMeans(object):
 
         Cluster centers and cluster labels for the given data will be stored in the objects properties.
         '''
-        if self.method == 'forgy':
-            cluster_centers = forgy_centers(self.data,self.k)
+
+        cluster_centers = initialize_centers(self.data,self.k,self.method)
 
         counter = 0
 
@@ -134,9 +133,7 @@ class KMeans(object):
 
         data = np.vstack([self.data,add_data])
 
-        if self.method == 'forgy':
-            cluster_centers = forgy_centers(data, self.k)
-
+        cluster_centers = initialize_centers(data,self.k,self.method)
 
         counter = 0
         print('additional data fit:')
@@ -177,14 +174,6 @@ def get_cluster_info(data,cluster_centers,metric='euclidean'):
     cluster_dist = np.min(distance_matrix,axis=1)
     return cluster_labels, cluster_dist
 
-def forgy_centers(data,k):
-    '''
-    returns k randomly chosen cluster centers from data
-    '''
-
-    return sample(list(data),k)
-
-
 def optimize_centroid(cluster_points):
     '''
     for a given set of observations in one cluster, compute and return a new centroid
@@ -203,6 +192,56 @@ def set_new_cluster_centers(data,cluster_labels,k):
         center_list.append(new_center)
 
     return np.vstack(center_list)
+
+def initialize_centers(data,k,method):
+    '''
+    initializes cluster centers with respect to given method
+    '''
+
+    if method == 'forgy':
+        cluster_centers = forgy_centers(data,k)
+    elif method == 'kmeans++':
+        cluster_centers = kmeans_plusplus_centers(data,k)
+
+    return cluster_centers
+
+#---------
+#cluster initializations
+#---------
+
+def forgy_centers(data,k):
+    '''
+    returns k randomly chosen cluster centers from data
+    '''
+
+    return sample(list(data),k)
+
+def kmeans_plusplus_centers(data,k):
+    '''
+    returns cluster centers initialized by kmeans++ method,
+    see http://ilpubs.stanford.edu:8090/778/1/2006-13.pdf
+    '''
+
+    c1 = sample(list(data),1)
+
+    if k == 1:
+        return c1
+
+    #TODO
+    return None
+
+def get_closest_distance(point,center_list):
+    '''
+    for a datapoint, get the distance to closest center from center_list
+    this function is needed for kmeans++ initialization
+    '''
+
+    distances = distance.cdist(np.asmatrix(point),center_list)
+    min = np.min(distances)
+    return min
+
+
+
 
 
 
