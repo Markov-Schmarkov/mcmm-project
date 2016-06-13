@@ -216,18 +216,18 @@ def kmeans_plusplus_centers(data,k):
     see http://ilpubs.stanford.edu:8090/778/1/2006-13.pdf
     '''
 
-    index_vals = range(len(data)-1)
-    center_list = []
+    index_vals = range(data.shape[0])
+
     c1 = sample(list(data),1)
+    center_list = np.array(c1)
     if k == 1:
         return c1
-    center_list.append(c1)
-    while len(center_list)<k:
-        distances = get_cluster_info(np.asmatrix(data),np.asmatrix(center_list))
+    while center_list.shape[0]<k:
+        labels,distances = get_cluster_info(data,center_list)
         D2 = D2_weighting(distances)
         distribution = rv_discrete(values=(index_vals,D2))
-        center_choice = data[distribution.rvs(size=1),:]
-        center_list.append(center_choice)
+        center_choice = np.array(data[distribution.rvs(size=1),:])
+        center_list = np.vstack([center_list,center_choice])
     return np.array(center_list)
 
 def D2_weighting(dist_array):
