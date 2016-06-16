@@ -224,3 +224,10 @@ def test_pcca():
     result = msm.pcca(num_clusters)
     assert_equals(result.shape, (num_states, num_clusters))
     assert_true(np.all(result <= 1) and np.all(result >= 0))
+
+
+def test_transition_rate():
+    matrix = np.random.rand(4, 4) + 0.001
+    msm = ana.MarkovStateModel(make_stochastic(matrix))
+    rate = msm.transition_rate([1], [2, 3])
+    assert_true(rate > 0)

@@ -137,6 +137,43 @@ class MarkovStateModel:
         """Returns the vector of backward commitors from A to B"""
         return self._commitors(B, A, self.backward_transition_matrix)
 
+    def probability_current(self, A, B):
+        """Returns the probability current from A to B.
+
+        Returns:
+        (n, n) ndarray containing the probabilty currents for every pair of states.
+        """
+        result = np.zeros(self.transition_matrix.shape)
+        fwd_commitors = self.forward_committors(A, B)
+        bwd_commitors = self.backward_commitors(A, B)
+        for (i,j), value in np.ndenumerate(self.transition_matrix):
+            if i != j:
+                result[i,j] = self.stationary_distribution[i] * bwd_commitors[i] * value * fwd_commitors[j]
+        return result
+
+    def effective_probability_current(self, A, B):
+        """Returns the effective probabiltiy current from A to B.
+
+        Returns:
+        (n, n) ndarray containing the effective probabilty currents for every pair of states.
+        """
+        current = self.probability_current(A, B)
+        result = np.zeros(current.shape)
+        for (i,j), value in np.ndenumerate(current):
+            result[i,j] = max(0, current[i,j]-current[j,i])
+        return result
+
+    def transition_rate(self, A, B):
+        """Returns the transition rate from A to B"""
+        current = self.probability_current(A, B)
+        num_trajs = np.sum(current[A,:])
+        result = num_trajs / self.stationary_distribution.dot(self.backward_commitors(A,B))
+        return result
+
+    def mean_first_passage_time(self, A, B):
+        """Returns the mean first-passage-time from A to B"""
+        return 1/self.transition_rate(A, B)
+
     def pcca(self, num_sets):
         """Compute meta-stable sets using PCCA++ and return the membership of all states to these sets.
 
