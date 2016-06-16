@@ -5,6 +5,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 __metaclass__ = type
 import numpy as np
 
+import msmtools.analysis
+
 class Error(Exception):
     """Base class for all exceptions raised by the mcmm module."""
 
@@ -132,6 +134,19 @@ class MarkovStateModel:
     def backward_commitors(self, A, B):
         """Returns the vector of backward commitors from A to B"""
         return self._commitors(B, A, self.backward_transition_matrix)
+
+    def pcca(self, num_sets):
+        """Compute meta-stable sets using PCCA++ and return the membership of all states to these sets.
+
+        Arguments:
+        num_sets: integer
+            Number of metastable sets
+
+        Returns:
+        clusters : (n, m) ndarray
+            Membership vectors. clusters[i, j] contains the membership of state i to metastable state j.
+        """
+        return msmtools.analysis.pcca(self.transition_matrix, num_sets)
 
     @staticmethod
     def _commitors(A, B, T):

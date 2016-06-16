@@ -1,4 +1,4 @@
-from mcmm import analysis as ana
+from mcmm import analysis as ana, estimation as est
 import numpy as np
 import random
 import unittest
@@ -215,3 +215,12 @@ def test_transient_state():
     assert_false(msm.is_aperiodic)
 # End periodicity tests
 
+def test_pcca():
+    num_states = 10
+    num_clusters = 4
+    traj = np.random.randint(0, num_states, 100)
+    transition_matrix = est.Estimator(traj).reversible_transition_matrix
+    msm = ana.MarkovStateModel(transition_matrix)
+    result = msm.pcca(num_clusters)
+    assert_equals(result.shape, (num_states, num_clusters))
+    assert_true(np.all(result <= 1) and np.all(result >= 0))
