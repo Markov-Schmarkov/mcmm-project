@@ -125,7 +125,9 @@ class MarkovStateModel:
         eigenvalues, eigenvectors = self._left_eigen()
         v = eigenvectors[:,np.isclose(eigenvalues, 1)].squeeze()
         assert(len(v.shape) == 1)
-        return v/sum(v)
+        v_real = np.real(v)
+        assert(np.allclose(v, v_real)) # result should be real
+        return v_real/sum(v_real)
     
     def forward_committors(self, A, B):
         """Returns the vector of forward commitors from A to B"""
@@ -164,7 +166,8 @@ class MarkovStateModel:
             elif i in B:
                 result[i] = 1
             else:
-                result[i] = solution[c]
+                result[i] = np.real(solution[c])
+                assert(np.isclose(result[i], solution[c])) # solution should be real
                 c += 1
         return result
 
