@@ -159,14 +159,18 @@ class KMeans(object):
 #-------------------
 
 class Regspace(object):
+    '''Regular space clustering.'''
 
     def __init__(self,data,max_centers,min_dist,metric='euclidean'):
         '''
 
         Args:
-            data:
-            max_centers:
-            min_dist:
+            data: ndarray containing (n,d)-shaped float data
+            max_centers: the maximal cluster centers to be determined by the algorithm before stopping iteration,
+            inteter greater than 0 required
+            min_dist: the minimal distances between cluster centers
+            metric: the metric used to determine distances d-dimensional space. Default = euclidean.
+            See scipy.spatial.distance.cdist for possible metrics
         '''
 
         self.data = data
@@ -210,22 +214,21 @@ class Regspace(object):
 
     def fit(self):
         '''
-
-        Returns:
-
+        performs regspace clustering on the data and provides cluster centers, clusterlabels and cluster distances
+        for the properties of the class of the instance
         '''
 
         center_list = [self.data[0,:]]
-
-        num_observations = self.data.shape[0]
+        num_observations,d = self.data.shape
 
         for i in range(1,num_observations):
-            if len(center_list >=self.max_centers):
+            if len(center_list) >= self.max_centers:
                 break
             x_active = self.data[i,:]
-            distances = distance.cdist(x_active,self.data)
+            distances = distance.cdist(x_active.reshape(1,d),np.array(center_list).reshape(len(center_list),d),metric=self.metric)
             if np.all(distances > self.min_dist):
                 center_list.append(x_active)
+
 
         cluster_centers = np.array(center_list)
         cluster_labels, cluster_dist = get_cluster_info(self.data,cluster_centers,self.metric)
