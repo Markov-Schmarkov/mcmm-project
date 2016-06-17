@@ -44,3 +44,51 @@ def test_find_cluster_centers():
             zahl = zahl +1
         cluster_centers[index] = cluster_centers[index] + k+1
         #assert_equals(zahl, j)
+        
+def test_find_cluster_centers_R2():
+    """This test should check if the cluster_centers are reasonable
+    """
+    n = 50 #number of data points in x- and y-direction
+    k = 5 #number of cluster_centers in x- and y-direction when generating data
+    k2 = k #number of cluster_centers in x- and y-direction when doing clustering
+    #dim = 2
+    factor = 0.3 #how much is the data perturbed
+    data = np.zeros((n*n,2))
+    for i in range(0,n):
+        for j in range(0,n):
+            data[n * i + j,0] = i % k + factor * np.random.normal() * math.pow(-1,int(2*np.random.rand()))
+            data[n * i + j,1] = j % k + factor * np.random.normal() * math.pow(-1,int(2*np.random.rand()))
+    #fig,ax = plt.subplots(ncols=2,nrows=1)
+    plt.scatter(data[:,0],data[:,1])
+    
+    #Do more clustering and take the best clustering
+    anzahl = k*4
+    error = n*n*n
+    for t in range(0,anzahl):
+        errorNew = 0
+        clusteringNew = cl.KMeans(data,k2*k2)
+        cluster_centersNew = clusteringNew.cluster_centers
+        for i in range(0,n):
+            for j in range(0,n):
+                dist = n
+                for l in range(0,k2*k2):
+                    distNew = np.linalg.norm(data[n*i+j,:] - cluster_centersNew[l,:])
+                    if dist > distNew:
+                        dist = distNew
+                errorNew = errorNew + dist
+        print(errorNew)
+        print(error)
+        if errorNew < error:
+            error = errorNew
+            clustering = clusteringNew
+            cluster_centers = cluster_centersNew
+    
+    plt.scatter(cluster_centers[:,0],cluster_centers[:,1],c='r')
+    
+    for i in range(0,k):
+        for j in range(0,k):
+            check = 0
+            for l in range(0,k2*k2):
+                if np.linalg.norm([i,j] - cluster_centers[l,:]) < 0.2:
+                    check = 1
+            assert_equals(check,1)
