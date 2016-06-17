@@ -3,6 +3,10 @@ This module should handle the discretization by means of a kmeans or regspace cl
 """
 
 #TODO exception handling
+#TODO forgy initialization throws invalid cluster centers for input data containing identical points
+#TODO omit vstack in KMeans fit_transform
+#TODO regspace transform, regspace fit_transform
+#TODO regspace comments, regspace testing
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 __metaclass__ = type
@@ -10,6 +14,10 @@ from random import sample
 import numpy as np
 from scipy.spatial import distance
 from scipy.stats import rv_discrete
+
+#----------------
+#K-Means clustering
+#----------------
 
 class KMeans(object):
     '''
@@ -85,7 +93,6 @@ class KMeans(object):
             cluster_centers = new_cluster_centers
             counter = counter+1
 
-
         cluster_labels, cluster_dist = get_cluster_info(self.data,cluster_centers,metric=self.metric)
         print('%s iterations until termination.'%str(counter))
         self._cluster_centers = cluster_centers
@@ -147,6 +154,86 @@ class KMeans(object):
         print('%s iterations until termination.' % str(counter))
         return cluster_centers, cluster_labels, cluster_dist
 
+#-------------------
+#Regspace clustering
+#-------------------
+
+class Regspace(object):
+
+    def __init__(self,data,max_centers,min_dist,metric='euclidean'):
+        '''
+
+        Args:
+            data:
+            max_centers:
+            min_dist:
+        '''
+
+        self.data = data
+        self.max_centers = max_centers
+        self.min_dist = min_dist
+        self.metric = metric
+        self._cluster_centers = None
+        self._cluster_labels = None
+        self._cluster_dist = None
+
+
+    @property
+    def cluster_centers(self):
+        if self._cluster_centers is None:
+            self.fit()
+        return self._cluster_centers
+
+    @cluster_centers.setter
+    def cluster_centers(self, value):
+        self._cluster_centers = value
+
+    @property
+    def cluster_labels(self):
+        if self._cluster_labels is None:
+            self.fit()
+        return self._cluster_labels
+
+    @cluster_labels.setter
+    def cluster_labels(self, value):
+        self._cluster_labels = value
+
+    @property
+    def cluster_dist(self):
+        if self._cluster_dist is None:
+            self.fit()
+        return self._cluster_dist
+
+    @cluster_dist.setter
+    def cluster_dist(self, value):
+        self._cluster_dist = value
+
+    def fit(self):
+        '''
+
+        Returns:
+
+        '''
+
+        center_list = [self.data[0,:]]
+
+        num_observations = self.data.shape[0]
+
+        for i in range(1,num_observations):
+            if len(center_list >=self.max_centers):
+                break
+            x_active = self.data[i,:]
+            distances = distance.cdist(x_active,self.data)
+            if np.all(distances > self.min_dist):
+                center_list.append(x_active)
+
+        cluster_centers = np.array(center_list)
+        cluster_labels, cluster_dist = get_cluster_info(self.data,cluster_centers,self.metric)
+        self.cluster_centers = cluster_centers
+        self.cluster_labels = cluster_labels
+        self.cluster_dist = cluster_dist
+
+
 #--------------
 #global functions
 #--------------
@@ -154,7 +241,8 @@ class KMeans(object):
 
 def get_cluster_info(data,cluster_centers,metric='euclidean'):
     '''
-    For (n,d)-shaped float data and given centroids, returns the corresponding cluster centers and corresponding labeling.
+    For (n,d)-shaped float data and given centroids, returns the corresponding cluster centers and corresponding labeling
+    with respect to a metric.
 
     Args:
         data: (n,d) ndarray
@@ -201,7 +289,7 @@ def initialize_centers(data,k,method):
     return cluster_centers
 
 #---------
-#cluster initializations
+#cluster center initializations
 #---------
 
 def forgy_centers(data,k):
