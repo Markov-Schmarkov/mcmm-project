@@ -5,6 +5,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 __metaclass__ = type
 import numpy as np
 
+import msmtools.analysis
+
 class Error(Exception):
     """Base class for all exceptions raised by the mcmm module."""
 
@@ -123,7 +125,9 @@ class MarkovStateModel:
         eigenvalues, eigenvectors = self._left_eigen()
         v = eigenvectors[:,np.isclose(eigenvalues, 1)].squeeze()
         assert(len(v.shape) == 1)
-        return v/sum(v)
+        v_real = np.real(v)
+        assert(np.allclose(v, v_real)) # result should be real
+        return v_real/sum(v_real)
     
     def forward_committors(self, A, B):
         """Returns the vector of forward commitors from A to B"""
@@ -132,6 +136,56 @@ class MarkovStateModel:
     def backward_commitors(self, A, B):
         """Returns the vector of backward commitors from A to B"""
         return self._commitors(B, A, self.backward_transition_matrix)
+
+    def probability_current(self, A, B):
+        """Returns the probability current from A to B.
+
+        Returns:
+        (n, n) ndarray containing the probabilty currents for every pair of states.
+        """
+        result = np.zeros(self.transition_matrix.shape)
+        fwd_commitors = self.forward_committors(A, B)
+        bwd_commitors = self.backward_commitors(A, B)
+        for (i,j), value in np.ndenumerate(self.transition_matrix):
+            if i != j:
+                result[i,j] = self.stationary_distribution[i] * bwd_commitors[i] * value * fwd_commitors[j]
+        return result
+
+    def effective_probability_current(self, A, B):
+        """Returns the effective probabiltiy current from A to B.
+
+        Returns:
+        (n, n) ndarray containing the effective probabilty currents for every pair of states.
+        """
+        current = self.probability_current(A, B)
+        result = np.zeros(current.shape)
+        for (i,j), value in np.ndenumerate(current):
+            result[i,j] = max(0, current[i,j]-current[j,i])
+        return result
+
+    def transition_rate(self, A, B):
+        """Returns the transition rate from A to B"""
+        current = self.probability_current(A, B)
+        num_trajs = np.sum(current[A,:])
+        result = num_trajs / self.stationary_distribution.dot(self.backward_commitors(A,B))
+        return result
+
+    def mean_first_passage_time(self, A, B):
+        """Returns the mean first-passage-time from A to B"""
+        return 1/self.transition_rate(A, B)
+
+    def pcca(self, num_sets):
+        """Compute meta-stable sets using PCCA++ and return the membership of all states to these sets.
+
+        Arguments:
+        num_sets: integer
+            Number of metastable sets
+
+        Returns:
+        clusters : (n, m) ndarray
+            Membership vectors. clusters[i, j] contains the membership of state i to metastable state j.
+        """
+        return msmtools.analysis.pcca(self.transition_matrix, num_sets)
 
     @staticmethod
     def _commitors(A, B, T):
@@ -149,7 +203,8 @@ class MarkovStateModel:
             elif i in B:
                 result[i] = 1
             else:
-                result[i] = solution[c]
+                result[i] = np.real(solution[c])
+                assert(np.isclose(result[i], solution[c])) # solution should be real
                 c += 1
         return result
 
