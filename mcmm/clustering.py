@@ -45,6 +45,10 @@ class KMeans(object):
         self._cluster_labels = None
         self._cluster_dist = None
 
+        if self.metric != 'euclidean':
+            print('Initialized with %s metric. Use euclidean metric for classic KMeans. \n'
+                  'Bad things might happen, depending on your dataset and used metric.'%metric)
+
     @property
     def cluster_centers(self):
         if self._cluster_centers is None:
@@ -172,7 +176,8 @@ class Regspace(object):
             metric: the metric used to determine distances d-dimensional space. Default = euclidean.
             See scipy.spatial.distance.cdist for possible metrics
         '''
-
+        print('NOTICE: regspace clustering is just a prototype and not tested whatsoever. \n'
+              'Proceed with caution, if you dare...')
         self.data = data
         self.max_centers = max_centers
         self.min_dist = min_dist
@@ -236,6 +241,11 @@ class Regspace(object):
         self.cluster_labels = cluster_labels
         self.cluster_dist = cluster_dist
 
+    def transform(self,data):
+        raise NotImplementedError
+
+    def fit_transform(self,):
+        raise NotImplementedError
 
 #--------------
 #global functions
@@ -256,6 +266,7 @@ def get_cluster_info(data,cluster_centers,metric='euclidean'):
         cluster_labels: (d,1) vector containing the corresponding cluster centers of each of the data rows
         cluster_dist (d,1) vector containing squared distance of data observation to corresponding cluster centroid
     '''
+
     distance_matrix = distance.cdist(data,cluster_centers,metric)
     cluster_labels = np.argmin(distance_matrix,axis=1)
     cluster_dist = np.min(distance_matrix,axis=1)
