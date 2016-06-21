@@ -21,8 +21,9 @@ def kmeans_blobs_2d(n_samples,n_clusters,k,method='kmeans++',std=1):
     data = make_blobs(n_samples,2,n_clusters,cluster_std=std)[0]
     kmeans = cl.KMeans(data,k,method)
     cluster_centers = kmeans.cluster_centers
+    cluster_labels = kmeans.cluster_labels
 
-    plt.scatter(data[:, 0], data[:, 1])
+    plt.scatter(data[:, 0], data[:, 1],c=cluster_labels)
     plt.scatter(cluster_centers[:, 0], cluster_centers[:, 1], c='r', s=50)
     plt.show()
 
@@ -43,10 +44,11 @@ def kmeans_blobs_3d(n_samples,n_clusters,k,method='kmeans++',std=1):
     data = make_blobs(n_samples,3,n_clusters,cluster_std=std)[0]
     kmeans = cl.KMeans(data,k,method)
     cluster_centers = kmeans.cluster_centers
+    cluster_labels = kmeans.cluster_labels
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
-    ax.scatter(data[:, 0], data[:, 1],data[:,2])
-    ax.scatter(cluster_centers[:, 0], cluster_centers[:, 1],cluster_centers[:,2], c='r', s=100,depthshade=False)
+    ax.scatter(data[:, 0], data[:, 1],data[:,2],c=cluster_labels)
+    ax.scatter(cluster_centers[:, 0], cluster_centers[:, 1],cluster_centers[:,2], c='r', s=150,depthshade=False)
     plt.show()
