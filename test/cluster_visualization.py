@@ -50,5 +50,3 @@ def kmeans_blobs_3d(n_samples,n_clusters,k,method='kmeans++',std=1):
     ax.scatter(data[:, 0], data[:, 1],data[:,2])
     ax.scatter(cluster_centers[:, 0], cluster_centers[:, 1],cluster_centers[:,2], c='r', s=100,depthshade=False)
     plt.show()
-
-kmeans_blobs_3d(300,3,3,method='kmeans++',std=1)
