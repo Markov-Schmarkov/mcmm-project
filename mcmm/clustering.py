@@ -21,18 +21,20 @@ from scipy.stats import rv_discrete
 
 class KMeans(object):
     '''
-    Class providing simple k-Means clustering for (n,d)-shaped 2-dimensional ndarray objects containing float data.
+    Class providing simple k-Means clustering for (n,d)-shaped trajectory ndarray objects containing float data
+    or list of trajectory ndarrays each with fitting dimension d
     '''
 
     def __init__(self,data,k,max_iter=100,method='forgy',metric='euclidean',atol=1e-05,rtol=1e-08):
         '''
         Args:
-            data: (n,d)-shaped 2-dimensional ndarray objects containing float data
+            data: (n,d)-shaped 2-dimensional ndarray objects containing float data or a list consisting of
+            fitting ndarrays
             k: int, number of cluster centers. required to be <= n.
             max_iter: int, maximal iterations before terminating
             method: way of initializing cluster centers, default set to Forgy's method
             metric: metric used to compute distances. for possible arguments see metric arguments of scipy.spatial.distance.cdist
-            atol,rtol: absolute and relative tolerance threshold to stop iteration before reaching max_iter. see numpy.allclose documentation.
+            atol,rtol: absolute and relative tolerance threshold to stop iteration before reaching max_iter. see numpy.allclose documentation
         '''
         self.k = k
         self.max_iter = max_iter
@@ -80,8 +82,14 @@ class KMeans(object):
         '''
         Runs the clustering iteration on the data it was given when initialized.
 
-        Cluster centers and cluster labels for the given data will be stored in the objects properties.
+        Cluster centers,cluster labels and distances to associated center for the given data will
+        be stored in the objects properties.
         '''
+        array_type = type(self.data)
+        traj_list_indices = None
+        if array_type is list:
+            data, traj_list_indices = concat_list(self.data)
+            self.data = data
 
         cluster_centers = initialize_centers(self.data,self.k,self.method)
 
@@ -90,6 +98,7 @@ class KMeans(object):
         while counter < self.max_iter:
             cluster_labels, cluster_dist = get_cluster_info(self.data,cluster_centers,metric=self.metric)
             new_cluster_centers = set_new_cluster_centers(self.data,cluster_labels,self.k)
+            #break condition
             if np.allclose(cluster_centers,new_cluster_centers,self.atol,self.rtol):
                 print('terminated by break condition.')
                 cluster_centers = new_cluster_centers
@@ -100,6 +109,9 @@ class KMeans(object):
         cluster_labels, cluster_dist = get_cluster_info(self.data,cluster_centers,metric=self.metric)
         print('%s iterations until termination.'%str(counter))
         self._cluster_centers = cluster_centers
+        #cutting of labels according to given list
+        if array_type is list:
+            cluster_labels = [cluster_labels[traj_list_indices[i]:traj_list_indices[i+1]] for i in range(len(traj_list_indices)-1)]
         self._cluster_labels = cluster_labels
         self._cluster_dist = cluster_dist
 
@@ -111,11 +123,20 @@ class KMeans(object):
             data: (n,d)-shaped 2-dimensional ndarray
         Returns: cluster labels for passed data argument and cluster distances with respect to the given metric
         '''
+        array_type = type(self.data)
+        traj_list_indices = None
+        if array_type is list:
+            data, traj_list_indices = concat_list(self.data)
+            self.data = data
 
         if self.cluster_centers is None or self.cluster_labels is None:
             self.fit()
 
-        return get_cluster_info(data,self.cluster_centers,metric=self.metric)
+        cluster_labels, cluster_dist = get_cluster_info(data,self.cluster_centers,metric=self.metric)
+
+        if array_type is list:
+            cluster_labels = [cluster_labels[traj_list_indices[i]:traj_list_indices[i + 1]] for i in range(len(traj_list_indices) - 1)]
+        return cluster_labels, cluster_dist
 
     def fit_transform(self,add_data):
         '''
@@ -147,6 +168,7 @@ class KMeans(object):
         while counter < self.max_iter:
             cluster_labels, cluster_dist = get_cluster_info(data, cluster_centers, metric=self.metric)
             new_cluster_centers = set_new_cluster_centers(data, cluster_labels, self.k)
+            #break condition
             if np.allclose(cluster_centers, new_cluster_centers, self.atol, self.rtol):
                 print('terminated by break condition.')
                 cluster_centers = new_cluster_centers
@@ -250,6 +272,16 @@ class Regspace(object):
 #--------------
 #global functions
 #--------------
+
+def concat_list(array_list):
+    '''
+    for a given list of ndarrays, concatenate to a single numpy array
+    and also return number of observations in each array to make reshaping of
+    cluster labeling according to passed lists possible
+    '''
+    traj_list_indices = [array.shape[0] for array in array_list]
+    traj_list_indices = np.cumsum([0] + traj_list_indices).tolist()
+    return np.concatenate(array_list,axis=0), traj_list_indices
 
 
 def get_cluster_info(data,cluster_centers,metric='euclidean'):
