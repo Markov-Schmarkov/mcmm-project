@@ -18,6 +18,6 @@ setup(
     author_email='',
     packages=['mcmm'],
     install_requires=['numpy', 'msmtools>=1.0'],
-    tests_require=['nose'],
+    tests_require=['nose', 'matplotlib'],
     test_suite='nose.collector'
 )

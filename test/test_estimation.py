@@ -8,13 +8,13 @@ from numpy.testing import assert_array_equal
 
 def test_compute_counting_matrix():
     # check simple example with 10 states and 3 clusters
-    a = np.array([1, 2, 1, 2, 2, 1, 1, 1, 2, 1])
+    a = np.array([0, 2, 1, 2, 2, 1, 1, 1, 2, 1])
     matrix = est.Estimator(a, 3, 2).count_matrix
-    assert_array_equal(np.array([[0, 0, 0], [0, 2, 1], [0, 1, 0]]), matrix)
+    assert_array_equal(np.array([[0, 0, 1], [0, 2, 0], [0, 1, 0]]), matrix)
     # check simple example with 10 states and 3 clusters, different lag_time
-    a = np.array([1, 2, 1, 2, 2, 1, 1, 1, 2, 1])
+    a = np.array([0, 2, 1, 2, 2, 1, 1, 1, 2, 1])
     matrix = est.Estimator(a, 1, 1).count_matrix
-    assert_array_equal(np.array([[0, 0, 0], [0, 2, 3], [0, 3, 1]]), matrix)
+    assert_array_equal(np.array([[0, 0, 1], [0, 2, 2], [0, 3, 1]]), matrix)
     # check simple example with 10 states and 2 clusters
     a = np.array([0, 1, 0, 1, 1, 0, 0, 0, 1, 0])
     matrix = est.Estimator(a, 1, 1).count_matrix
@@ -35,7 +35,7 @@ def test_simple_markov():
     """
     A = np.array([[0.5, 0.3, 0.2], [0.2, 0.6, 0.2], [0.1, 0.05, 0.85]])
     n = 50000
-    cluster_labels = np.zeros(n)
+    cluster_labels = np.zeros(n, dtype=np.dtype(int))
     cluster_labels[0] = 1;
     for i in range(1, n):
         zahl = np.random.rand(1)
@@ -154,14 +154,14 @@ def test_clustering_estimation_bigger_markov():
 
 def test_transition_matrix():
     clusters = 10
-    traj = np.random.randint(0, clusters, 50)
+    traj = np.random.randint(0, clusters, 200)
     transition_matrix = est.Estimator(traj, 1, 1).transition_matrix
     row_sums = transition_matrix.sum(axis=1)
     np.testing.assert_allclose(row_sums, 1)
 
 
 def test_transition_matrix_reversible():
-    traj = np.random.randint(0, 10, 50)
+    traj = np.random.randint(0, 10, 200)
     transition_matrix = est.Estimator(traj, 1, 1).reversible_transition_matrix
     msm = ana.MarkovStateModel(transition_matrix)
     assert_true(msm.is_reversible)

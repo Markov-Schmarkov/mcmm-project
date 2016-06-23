@@ -5,6 +5,8 @@ This module should handle the transition counting and transition matrix estimati
 from __future__ import absolute_import, division, print_function, unicode_literals
 __metaclass__ = type
 
+from .common import *
+
 import numpy as np
 
 class Estimator:
@@ -27,6 +29,10 @@ class Estimator:
         self._count_matrix = None
         self._transition_matrix = None
         self._reversible_transition_matrix = None
+        
+        for state in range(self._num_clusters):
+            if state not in self._trajectory:
+                raise InvalidValue('Data contains no transitions from state {}.'.format(state))
 
     @property
     def count_matrix(self):
