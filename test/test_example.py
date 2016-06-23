@@ -4,7 +4,7 @@ whether mcmm.example.generate_test_data produces the correct number of independe
 that all trajectories have the correct length, dimension, and floating point type.
 """
 
-import mcmm
+import mcmm.example
 import numpy as np
 from nose.tools import assert_true
 
