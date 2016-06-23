@@ -231,3 +231,26 @@ def test_transition_rate():
     msm = ana.MarkovStateModel(make_stochastic(matrix))
     rate = msm.transition_rate([1], [2, 3])
     assert_true(rate > 0)
+
+
+def test_restriction():
+    matrix = np.array([
+        [0.4, 0.2, 0.2, 0.2],
+        [  0, 0.4, 0.5, 0.1],
+        [  0, 0.1, 0.7, 0.2],
+        [  0, 0.6, 0.1, 0.3]
+    ])
+    msm = ana.MarkovStateModel(matrix)
+    classes = sorted(msm.communication_classes, key=lambda c: c.states)
+    assert_equals(len(classes), 2)
+    assert_false(classes[0].closed)
+    assert_true(classes[1].closed)
+    assert_equals(classes[0].states, [0])
+    assert_equals(classes[1].states, [1, 2, 3])
+    msm2 = msm.restriction(classes[1])
+    np.testing.assert_allclose(msm2.transition_matrix, np.array([
+        [0.4, 0.5, 0.1],
+        [0.1, 0.7, 0.2],
+        [0.6, 0.1, 0.3]
+    ]))
+

@@ -10,6 +10,11 @@ from .common import *
 import numpy as np
 import msmtools.analysis
 
+class CommunicationClass:
+    def __init__(self, states, closed):
+        self.states = states
+        self.closed = closed
+        
 
 class MarkovStateModel:
 
@@ -27,17 +32,27 @@ class MarkovStateModel:
         self._backward_transition_matrix = None
         self._stationary_distribution = None
         self._num_states = transition_matrix.shape[0]
-        self._is_irreducible = None
         self._is_aperiodic = None
         self._eigenvalues = None
         self._left_eigenvectors = None
+        self._communication_classes = None
 
+    @property
+    def communication_classes(self):
+        """The set of communication classes of the state space.
+        Returns: [CommunicationClass]
+        """
+        if self._communication_classes is None:
+            self._communication_classes = [
+                CommunicationClass(sorted(c), component_is_closed(c, self.transition_matrix))
+                for c in strongly_connected_components(self.transition_matrix)
+            ]
+        return self._communication_classes
+    
     @property
     def is_irreducible(self):
         """Whether the markov chain is irreducible."""
-        if self._is_irreducible is None:
-            self._is_irreducible = (len(strongly_connected_components(self.transition_matrix)) == 1)
-        return self._is_irreducible
+        return (len(self.communication_classes) == 1)
     
     @property
     def is_aperiodic(self):
@@ -181,6 +196,19 @@ class MarkovStateModel:
             Membership vectors. clusters[i, j] contains the membership of state i to metastable state j.
         """
         return msmtools.analysis.pcca(self.transition_matrix, num_sets)
+    
+    def restriction(self, communication_class):
+        """Returns the restriction of the model to a single communication class.
+        
+        Arguments:
+        communication_class: CommunicationClass
+            The model’s communication classes that the result should be restricted to. Required to be closed.
+        
+        Returns: MarkovStateModel
+            The restricted markov chain. Note that the states will be re-indexed to range [0, n]
+        """
+        assert(communication_class.closed)
+        return type(self)(self.transition_matrix[np.ix_(communication_class.states, communication_class.states)])
 
     @staticmethod
     def _commitors(A, B, T):
@@ -227,6 +255,17 @@ def depth_first_search(adjacency_matrix, root, flags):
                 result += depth_first_search(adjacency_matrix, vertex, flags)
     result.append(root)
     return result
+
+
+def component_is_closed(component, adjacency_matrix):
+    """Returns whether a component is closed, i.e. whether there are no
+    edges pointing out of the component
+    """
+    for a in component:
+        for b in set(range(adjacency_matrix.shape[0])).difference(component):
+            if adjacency_matrix[a,b] > 0:
+                return False
+    return True
 
 
 def strongly_connected_components(adjacency_matrix):
