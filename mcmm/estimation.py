@@ -10,7 +10,7 @@ from .common import *
 import numpy as np
 
 class Estimator:
-    def __init__(self, trajectory, lag_time=1, window_shift=1):
+    def __init__(self, trajectories, lag_time=1, window_shift=1):
         """Constructor.
 
         Arguments:
@@ -21,33 +21,29 @@ class Estimator:
         window_shift: int, default=1
             Window shifting distance of the estimator. Value should be in range 1 to lag_time.
         """
-        self._trajectory = trajectory
+        if isinstance(trajectories, np.ndarray) and len(trajectories.shape) == 1:
+            trajectories = [trajectories]
         self._lag_time = lag_time
         self._window_shift = window_shift
-        self._num_clusters = np.max(trajectory)+1
+        self._num_clusters = max(np.max(t) for t in trajectories)+1
 
-        self._count_matrix = None
+        self._count_matrix = np.zeros((self._num_clusters,self._num_clusters), dtype=np.dtype(int))
+
+        for traj in trajectories:
+            self._update_count_matrix(traj)
+
         self._transition_matrix = None
         self._reversible_transition_matrix = None
-        
-        for state in range(self._num_clusters):
-            if state not in self._trajectory:
-                raise InvalidValue('Data contains no transitions from state {}.'.format(state))
 
     @property
     def count_matrix(self):
-        if self._count_matrix is None:
-            self._count_matrix = self._compute_count_matrix()
         return self._count_matrix
 
-
-    def _compute_count_matrix(self):
-        """Computes the count matrix based on the cluster labels. The method is the sliding window approach."""
-        num_states = self._trajectory.shape[0]
-        count_matrix = np.zeros((self._num_clusters,self._num_clusters))
-        for s in range(0, num_states-self._lag_time, self._window_shift):
-            count_matrix[self._trajectory[s], self._trajectory[s + self._lag_time]] += 1
-        return count_matrix
+    def _update_count_matrix(self, traj):
+        """Updates the count matrix by adding the transitions occuring in the given trajectory. The method is the sliding window approach."""
+        length = traj.shape[0]
+        for s in range(0, length-self._lag_time, self._window_shift):
+            self._count_matrix[traj[s], traj[s + self._lag_time]] += 1
 
     @property
     def transition_matrix(self):
@@ -75,4 +71,6 @@ class Estimator:
 
 def make_stochastic(matrix):
     row_sums = matrix.sum(axis=1)
+    if not np.all(row_sums > 0):
+        raise InvalidValue('Input matrix contains all-zero rows.')
     return matrix / row_sums[:, np.newaxis]

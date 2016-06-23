@@ -165,3 +165,18 @@ def test_transition_matrix_reversible():
     transition_matrix = est.Estimator(traj, 1, 1).reversible_transition_matrix
     msm = ana.MarkovStateModel(transition_matrix)
     assert_true(msm.is_reversible)
+
+def test_multiple_trajectories():
+    trajs = [
+        np.array([0, 1, 2, 3, 2]),
+        np.array([1, 3, 1, 3]),
+        np.array([2, 0, 4, 1, 4, 0])
+    ]
+    estimator = est.Estimator(trajs)
+    np.testing.assert_allclose(estimator.count_matrix, np.array([
+        [0, 1, 0, 0, 1],
+        [0, 0, 1, 2, 1],
+        [1, 0, 0, 1, 0],
+        [0, 1, 1, 0, 0],
+        [1, 1, 0, 0, 0]
+    ]))
