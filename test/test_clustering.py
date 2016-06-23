@@ -7,6 +7,7 @@ import unittest
 from nose.tools import assert_true, assert_false, assert_equals, assert_raises
 from numpy.testing import assert_array_equal
 from mcmm import example as ex
+from nose.tools import nottest
 
 
 def test_find_cluster_centers():
@@ -46,6 +47,7 @@ def test_find_cluster_centers():
         cluster_centers[index] = cluster_centers[index] + k+1
         #assert_equals(zahl, j)
         
+@nottest
 def test_find_cluster_centers_R2():
     """This test should check if the cluster_centers are reasonable
     We test clustering in R^2
