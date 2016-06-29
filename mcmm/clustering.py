@@ -112,6 +112,7 @@ class KMeans(object):
         #cutting of labels according to given list
         if array_type is list:
             cluster_labels = slice_labels(cluster_labels, traj_list_indices)
+            cluster_dist = slice_labels(cluster_dist,traj_list_indices)
         self._cluster_labels = cluster_labels
         self._cluster_dist = cluster_dist
 
@@ -123,19 +124,21 @@ class KMeans(object):
             data: (n,d)-shaped ndarray or list consisting of ndarrays with same dimension d
         Returns: cluster labels for passed data argument and cluster distances with respect to the given metric
         '''
-        array_type = type(self._data)
+        array_type = type(data)
         traj_list_indices = None
         if array_type is list:
-            data, traj_list_indices = concat_list(self._data)
-            self._data = data
+            data, traj_list_indices = concat_list(data)
+
 
         if self.cluster_centers is None or self.cluster_labels is None:
             self.fit()
 
+        print(type(data))
         cluster_labels, cluster_dist = get_cluster_info(data, self.cluster_centers, metric=self._metric)
 
         if array_type is list:
             cluster_labels = slice_labels(cluster_labels,traj_list_indices)
+            cluster_dist = slice_labels(cluster_dist, traj_list_indices)
         return cluster_labels, cluster_dist
 
     def fit_transform(self,add_data):
