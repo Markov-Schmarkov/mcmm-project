@@ -76,6 +76,12 @@ def test_backward_commitor():
     np.testing.assert_array_almost_equal(msm.backward_commitors([1], [2]), [0.5, 1, 0])
 
 
+def test_commitor_edgecase():
+    """Test if commitors work if A union B is everything"""
+    matrix = np.random.rand(4, 4) + 0.001
+    msm = ana.MarkovStateModel(make_stochastic(matrix))
+    np.testing.assert_array_almost_equal(msm.forward_committors([0, 1], [2, 3]), [0, 0, 1, 1])
+
 def test_reversible():
     matrix = np.array([
         [ 0.9,  0.1,    0,    0],
