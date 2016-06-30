@@ -9,6 +9,7 @@ from .common import *
 
 import numpy as np
 import msmtools.analysis
+import pandas as pd
 
 class CommunicationClass:
     def __init__(self, states, closed):
@@ -215,9 +216,10 @@ class MarkovStateModel:
         """Returns the vector of forward commitors from A to B given propagator T"""
         n = len(T)
         C = list(set(range(n)) - set().union(A, B))
-        M = T - np.identity(n)
-        d = np.sum(M[np.ix_(C, B)], axis=1)
-        solution = np.linalg.solve(M[np.ix_(C, C)], -d)
+        if C:
+            M = T - np.identity(n)
+            d = np.sum(M.iloc[C,B])
+            solution = np.linalg.solve(M.iloc[C, C], -d)
         result = np.empty(n)
         c = 0
         for i in range(n):
@@ -250,7 +252,7 @@ def depth_first_search(adjacency_matrix, root, flags):
     result = []
     flags[root] = True
     for vertex in range(adjacency_matrix.shape[0]):
-        if adjacency_matrix[root,vertex]:
+        if adjacency_matrix.iat[root, vertex]:
             if not flags[vertex]:
                 result += depth_first_search(adjacency_matrix, vertex, flags)
     result.append(root)
