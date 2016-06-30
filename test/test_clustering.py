@@ -131,3 +131,28 @@ def test_find_cluster_centers_example1():
     assert_equals(check,1)
 
     plt.scatter(cluster_centers[:,0],cluster_centers[:,1],c='r')
+    
+@nottest
+def test_find_cluster_center_multiple_trajectories1():
+    """This test checks if the clustering works with multiple trajectories as well
+    Here we just use clustering in R^1 like in "test_find_cluster_centers()"
+    """
+    n = 2000 #number of data points
+    k = 30 #number of cluster_centers
+    iter = 10 #number of trajetories
+    data =  ex.generate_test_data(n,iter);
+    
+    for i in range(0,n):
+        for r in range (0,2):
+            data[0][i,r] = data[0][i,r] + 6;
+        data[1][i,0] = data[1][i,0] + 6;
+        
+    for r in range(0,iter):
+        plt.scatter(data[r][:,0],data[r][:,1],c='b')
+    
+    clustering = cl.KMeans(data,k,method='kmeans++')
+    cluster_centers = clustering.cluster_centers
+    cluster_labels = clustering.cluster_labels
+    
+    plt.scatter(cluster_centers[:,0],cluster_centers[:,1],c='r')
+    
