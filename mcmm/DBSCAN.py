@@ -1,6 +1,5 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 __metaclass__ = type
-from random import sample
 import numpy as np
 from scipy.spatial import distance
 
@@ -35,25 +34,28 @@ class DBSCAN(object):
 
     def fit(self):
         # initialize variables
-        [n_samples,dim] = self.data.shape
+        [n_samples,dim] = self._data.shape
         visited = np.zeros(n_samples,dtype=bool)
         cluster_labels = [None]*n_samples
         cluster_index = 0
 
-        for i,observation in enumerate(self.data):
+        for i,observation in enumerate(self._data):
             if visited[i]:
                 pass
             else:
                 visited[i] = True
-                p = self._data[i]
-                neighbors = get_region(self._data,p,self._eps,self._metric)
-                if neighbors.shape < self._minPts:
+                neighbor_indices = get_region(self._data,observation,self._eps,self._metric)
+                neighbors = self._data[neighbor_indices]
+                if len(neighbor_indices) < self._minPts:
                     # mark as noise
-                    cluster_labels[i] = 0
+                    cluster_labels[i] = 'noise'
                 else:
                     # move up to next cluster
                     cluster_index = cluster_index + 1
-                    expand_cluster()
+                    #-------------
+                    #expand cluster subalgorithm
+                    #-------------
+                    cluster_labels=expand_cluster(self._data,i,neighbor_indices,neighbors,cluster_labels,cluster_index,self._eps,self._minPts,visited,self._metric)
 
         self.cluster_labels = cluster_labels
 
@@ -65,29 +67,36 @@ class DBSCAN(object):
 
 def get_region(data,p,eps,metric):
     '''
-    returns subset of data containing all points in the eps-ball around p with respect to given metric
+    returns subset of data containing all points in the eps-ball around p with respect to given metric and the
+    corresponding indices
     '''
     n_samples,dim  = data.shape
-    distances = distance.cdist(p.reshape(1,dim),data,metric=metric).reshape(dim)
+    distances = distance.cdist(p.reshape(1,dim),data,metric=metric)
     mask = distances<eps
+    mask = mask.reshape((n_samples,))
     indices = np.arange(n_samples)[mask]
-    region = data[mask]
+    #region = data[mask]
 
-    return region
+    return indices
 
-def expand_cluster(data,i,neighbor_indices,neighbors,cluster_labels,cluster_index,eps,minPts,visited,metric):
+def expand_cluster(data,i,neighbor_indices,neighbors,cluster_labels,active_cluster_index,eps,minPts,visited,metric):
     '''
 
     '''
-    cluster_labels[i] = cluster_index
-    for k,p in enumerate(neighbors):
-        visited[k] = True
-        neighbors_indices2,neighbors2 = get_region(data,p,eps,metric)
-        if neighbors2.shape[0] >= minPts:
-            new_indices = np.union1d(neighbor_indices,neighbors_indices2)
-        if visited[k] is None:
-            cluster_labels[k] = cluster_index
+    cluster_labels[i] = active_cluster_index
+    while not np.all(visited[neighbor_indices]):
 
+        for k,p in enumerate(neighbors):
+
+            if not visited[k]:
+                visited[k] = True
+                neighbor_indices2 = get_region(data,p,eps,metric)
+                if len(neighbor_indices2) >= minPts:
+                    neighbor_indices = np.union1d(neighbor_indices,neighbor_indices2)
+            if cluster_labels[k] is None:
+                cluster_labels[k] = active_cluster_index
+
+    return cluster_labels
 
 
 
