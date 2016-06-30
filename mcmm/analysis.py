@@ -110,7 +110,29 @@ class MarkovStateModel:
         if self._stationary_distribution is None:
             self._stationary_distribution = self._find_stationary_distribution()
         return self._stationary_distribution
+       
 
+    def left_eigenvector(self, k):
+        """Computes the first k eigenvectors for largest eigenvalues
+        
+        Returns: eigenvalues    
+        """
+        number_of_eigenvectors = k +1
+        ausgabe = np.zeros((len(self.transition_matrix),number_of_eigenvectors))
+        eigenvalues, eigenvectors = self._left_eigen()
+        for i in range (0,number_of_eigenvectors):
+            maxi = 0
+            jj = len(self.transition_matrix) + 10;
+            for j in range (0,len(self.transition_matrix)):
+                if(maxi < np.abs(eigenvalues[j])):
+                    maxi = np.abs(eigenvalues[j])
+                    jj = j
+            if(jj < len(self.transition_matrix)+ 1):
+                ausgabe[:,i] = eigenvectors[:,jj]
+                eigenvalues[jj] = 0
+        return ausgabe
+    
+    
     @property
     def is_reversible(self):
         """Whether the markov chain is reversible"""
@@ -126,6 +148,16 @@ class MarkovStateModel:
             self._eigenvalues, self._left_eigenvectors = np.linalg.eig(self.transition_matrix.T)
         return (self._eigenvalues, self._left_eigenvectors)
 
+    def _right_eigen(self):
+        """Finds the eigenvalues and right eigenvectors of the transition matrix.
+        
+        Returns: (eigenvalues, eigenvectors)
+            where eigenvalues[i] corresponds to eigenvectors[:,i]
+        """
+        if not self._right_eigenvectors:
+            self._eigenvalues, self._right_eigenvectors = np.linalg.eig(self.transition_matrix)
+        return (self._eigenvalues, self._right_eigenvectors)
+            
     def _find_stationary_distribution(self):
         """Finds the stationary distribution of a given stochastic matrix.
         The matrix is assumed to be irreducible.
