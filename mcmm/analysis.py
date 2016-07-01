@@ -161,8 +161,12 @@ class MarkovStateModel:
         Returns: (eigenvalues, eigenvectors)
             where eigenvalues[i] corresponds to eigenvectors[:,i]
         """
-        if not self._right_eigenvectors:
+        if self._right_eigenvectors is None:
             self._eigenvalues, self._right_eigenvectors = np.linalg.eig(self.transition_matrix)
+            self._right_eigenvectors = pd.DataFrame([
+                pd.Series(x, index=self.transition_matrix.index)
+                for x in self._left_eigenvectors
+            ])
         return (self._eigenvalues, self._right_eigenvectors)
             
     def _find_stationary_distribution(self):
