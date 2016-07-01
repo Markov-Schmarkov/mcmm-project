@@ -41,12 +41,14 @@ class MarkovStateModel:
     def communication_classes(self):
         """The set of communication classes of the state space.
         Returns: [CommunicationClass]
+            List of communication classes sorted by size descending.
         """
         if self._communication_classes is None:
             self._communication_classes = [
                 CommunicationClass(sorted(c), component_is_closed(c, self.transition_matrix))
                 for c in strongly_connected_components(self.transition_matrix)
             ]
+        self._communication_classes.sort(key=lambda c: len(c.states), reverse=True)
         return self._communication_classes
     
     @property
