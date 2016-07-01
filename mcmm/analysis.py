@@ -283,7 +283,6 @@ class MarkovStateModel:
             d = np.sum(M.iloc[C,B], axis=1)
             solution = np.linalg.solve(M.iloc[C, C], -d)
         result = pd.Series(np.empty(n), index=self.transition_matrix.index)
-        print(result)
         c = 0
         for i in result.index:
             if i in A:
