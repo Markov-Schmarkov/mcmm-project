@@ -102,7 +102,7 @@ class MarkovStateModel:
         """Returns the period of the markov chain."""
         if not self.is_irreducible:
             raise InvalidOperation('Cannot compute period of reducible Markov chain')
-        eigenvalues, _ = self._left_eigen()
+        eigenvalues, _ = self.left_eigen
         norms = np.absolute(eigenvalues)
         period = np.count_nonzero(np.isclose(norms, 1))
         assert(period >= 1)
@@ -117,12 +117,12 @@ class MarkovStateModel:
 
     def left_eigenvector(self, k):
         """Computes the first k eigenvectors for largest eigenvalues
-        
+
         Returns: eigenvalues    
         """
         number_of_eigenvectors = k +1
         ausgabe = np.zeros((len(self.transition_matrix),number_of_eigenvectors))
-        eigenvalues, eigenvectors = self._left_eigen()
+        eigenvalues, eigenvectors = self.left_eigen
         for i in range (0,number_of_eigenvectors):
             maxi = 0
             jj = len(self.transition_matrix) + 10;
@@ -141,10 +141,11 @@ class MarkovStateModel:
         """Whether the markov chain is reversible"""
         return np.allclose(self.backward_transition_matrix, self.transition_matrix)
 
-    def _left_eigen(self):
+    @property
+    def left_eigen(self):
         """Finds the eigenvalues and left eigenvectors of the transition matrix.
         
-        Returns: (eigenvalues, eigenvectors)
+        Returns: (eigenvalues, eigenvectors) = (pandas.Series, pandas.DataFrame)
             where eigenvalues[i] corresponds to eigenvectors[:,i]
         """
         if self._left_eigenvectors is None:
@@ -155,10 +156,11 @@ class MarkovStateModel:
             ])
         return (self._eigenvalues, self._left_eigenvectors)
 
-    def _right_eigen(self):
+    @property
+    def right_eigen(self):
         """Finds the eigenvalues and right eigenvectors of the transition matrix.
         
-        Returns: (eigenvalues, eigenvectors)
+        Returns: (eigenvalues, eigenvectors) = (pandas.Series, pandas.DataFrame)
             where eigenvalues[i] corresponds to eigenvectors[:,i]
         """
         if self._right_eigenvectors is None:
@@ -175,7 +177,7 @@ class MarkovStateModel:
         """
         if not self.is_irreducible:
             raise InvalidOperation('Cannot compute stationary distribution of reducible Markov chain')
-        eigenvalues, eigenvectors = self._left_eigen()
+        eigenvalues, eigenvectors = self.left_eigen
         v = eigenvectors.iloc[:,np.isclose(eigenvalues, 1)].squeeze()
         assert(len(v.shape) == 1)
         v_real = v.apply(np.real)
