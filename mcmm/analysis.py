@@ -231,9 +231,10 @@ class MarkovStateModel:
         (n, n) pandas.DataFrame containing the effective probabilty currents for every pair of states.
         """
         current = self.probability_current(A, B)
-        result = np.zeros(current.shape)
-        for (i,j), value in np.ndenumerate(current):
-            result[i,j] = max(0, current[i,j]-current[j,i])
+        result = pd.DataFrame(np.zeros(current.shape))
+        for i, row in current.iterrows():
+            for j in row:
+                result.at[i,j] = max(0, current.at[i,j]-current.at[j,i])
         return result
 
     def transition_rate(self, A, B):
@@ -281,16 +282,17 @@ class MarkovStateModel:
             M = T - np.identity(n)
             d = np.sum(M.iloc[C,B], axis=1)
             solution = np.linalg.solve(M.iloc[C, C], -d)
-        result = pd.Series(np.empty(n))
+        result = pd.Series(np.empty(n), index=self.transition_matrix.index)
+        print(result)
         c = 0
-        for i in self.transition_matrix.index:
+        for i in result.index:
             if i in A:
-                result[i] = 0
+                result.at[i] = 0
             elif i in B:
-                result[i] = 1
+                result.at[i] = 1
             else:
-                result[i] = np.real(solution[c])
-                assert(np.isclose(result[i], solution[c])) # solution should be real
+                result.at[i] = np.real(solution[c])
+                assert(np.isclose(result.at[i], solution[c])) # solution should be real
                 c += 1
         return result
 
