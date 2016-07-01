@@ -23,7 +23,8 @@ class MarkovStateModel:
         """Create new Markov State Model.
 
         Parameters:
-        transition_matrix: pandas.DataFrame where entry (a,b) contains transition probability a -> b
+        transition_matrix: pandas.DataFrame
+            Matrix where entry (a,b) contains transition probability a -> b
         """
         if not self.is_stochastic_matrix(transition_matrix):
             raise InvalidValue('Transition matrix must be stochastic')
@@ -41,6 +42,7 @@ class MarkovStateModel:
     @property
     def communication_classes(self):
         """The set of communication classes of the state space.
+        
         Returns: [CommunicationClass]
             List of communication classes sorted by size descending.
         """
@@ -87,11 +89,18 @@ class MarkovStateModel:
 
     @property
     def transition_matrix(self):
-        """The transition matrix where entry (a,b) denotes transition probability a->b"""
+        """The transition matrix where entry (a,b) denotes transition probability a->b.
+        
+        Returns: pandas.DataFrame
+        """
         return self._transition_matrix
     
     @property
     def backward_transition_matrix(self):
+        """The backwards transition matrix.
+        
+        Returns: pandas.DataFrame
+        """
         if self._backward_transition_matrix is None:
             pi = self.stationary_distribution
             self._backward_transition_matrix = self.transition_matrix.T.mul(pi, axis=1).mul(1/pi, axis=0)
@@ -99,7 +108,10 @@ class MarkovStateModel:
     
     @property
     def period(self):
-        """Returns the period of the markov chain."""
+        """The period of the markov chain. The markov chain is required to be irreducible.
+        
+        Returns: int
+        """
         if not self.is_irreducible:
             raise InvalidOperation('Cannot compute period of reducible Markov chain')
         eigenvalues, _ = self.left_eigen
@@ -188,7 +200,10 @@ class MarkovStateModel:
         return v_real/np.sum(v_real)
     
     def forward_committors(self, A, B):
-        """Returns the vector of forward commitors from A to B"""
+        """Returns the vector of forward commitors from A to B
+        
+        Returns: pandas.Series
+        """
         return self._commitors(A, B, self.transition_matrix)
     
     def backward_commitors(self, A, B):
