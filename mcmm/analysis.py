@@ -219,7 +219,7 @@ class MarkovStateModel:
         return 1/self.transition_rate(A, B)
 
     def pcca(self, num_sets):
-        """Compute meta-stable sets using PCCA++ and return the membership of all states to these sets.
+        """Compute membership probability matrix using PCCA++.
 
         Arguments:
         num_sets: integer
@@ -227,9 +227,45 @@ class MarkovStateModel:
 
         Returns:
         clusters : (n, m) ndarray
-            Membership vectors. clusters[i, j] contains the membership of state i to metastable state j.
+            Membership vectors. clusters[i, j] contains the membership probability of state i to metastable state j.
         """
         return msmtools.analysis.pcca(self.transition_matrix, num_sets)
+    
+    def metastable_set_assignments(self, num_sets):
+        """Performs PCCA++ and returns assignment vector, i.e. a vector with num_states entries,
+        that are the most probable metastable set for every corresponding state.
+        
+        TODO: raise error, when num_sets is smaller than num_states.
+
+        Arguments:
+        num_sets: integer
+            Number of metastable sets
+
+        Returns:
+        (n, 1) ndarray (vector) containing the assignments of each state i (index) to a metastable set (value).
+        """
+        pcca_mat = self.pcca(num_sets)
+        return np.array([np.argmax(pcca_mat[i, :]) for i in range(self._num_states)])
+
+    def metastable_sets(self, num_sets):
+        """Performs PCCA++ and returns the metastable sets.
+        
+        TODO: raise error, when num_sets is smaller than num_states.
+
+        Arguments:
+        num_sets: integer
+            Number of metastable sets
+
+        Returns:
+        List of (n, 1) ndarrays (vectors), which are the states belonging to the corresponding metastable set.
+        """
+        pcca_mat = self.pcca(num_sets)
+        sets = []
+        for i in range(num_sets):
+            sets.append([])
+        for i in range(self._num_states):
+            sets[np.argmax(pcca_mat[i, :])].append(i)
+        return sets
     
     def restriction(self, communication_class):
         """Returns the restriction of the model to a single communication class.
