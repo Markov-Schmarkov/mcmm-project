@@ -146,7 +146,7 @@ class MarkovStateModel:
         Returns: (eigenvalues, eigenvectors)
             where eigenvalues[i] corresponds to eigenvectors[:,i]
         """
-        if not self._left_eigenvectors:
+        if self._left_eigenvectors is None:
             self._eigenvalues, self._left_eigenvectors = np.linalg.eig(self.transition_matrix.T)
         return (self._eigenvalues, self._left_eigenvectors)
 
