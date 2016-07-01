@@ -8,6 +8,7 @@ __metaclass__ = type
 from .common import *
 
 import numpy as np
+import pandas as pd
 
 class Estimator:
     def __init__(self, trajectories, lag_time=1, window_shift=1):
@@ -37,7 +38,7 @@ class Estimator:
 
     @property
     def count_matrix(self):
-        return self._count_matrix
+        return pd.DataFrame(self._count_matrix)
 
     def _update_count_matrix(self, traj):
         """Updates the count matrix by adding the transitions occuring in the given trajectory. The method is the sliding window approach."""
@@ -46,25 +47,29 @@ class Estimator:
             self._count_matrix[traj[s], traj[s + self._lag_time]] += 1
 
     @property
-    def transition_matrix(self):
+    def _np_transition_matrix(self):
         if self._transition_matrix  is None:
-            self._transition_matrix = make_stochastic(self.count_matrix)
+            self._transition_matrix = make_stochastic(self._count_matrix)
         return self._transition_matrix
+    
+    @property
+    def transition_matrix(self):
+        return pd.DataFrame(self._np_transition_matrix)
 
     @property
     def reversible_transition_matrix(self):
         if self._reversible_transition_matrix is None:
             self._reversible_transition_matrix = self._compute_reversible_transition_matrix()
-        return self._reversible_transition_matrix
+        return pd.DataFrame(self._reversible_transition_matrix)
 
     def _compute_reversible_transition_matrix(self):
-        matrix = self.transition_matrix
+        matrix = self._np_transition_matrix
         matrix_next = np.zeros(matrix.shape)
         while not np.allclose(matrix, matrix_next, rtol=0.01):
-            for i,j in np.ndindex(*self.count_matrix.shape):
-                d_i = self.count_matrix[i,:].sum() / matrix[i,:].sum()
-                d_j = self.count_matrix[j,:].sum() / matrix[j,:].sum()
-                matrix_next[i,j] = (self.count_matrix[i,j] + self.count_matrix[j,i])/(d_i + d_j)
+            for i,j in np.ndindex(*self._count_matrix.shape):
+                d_i = self._count_matrix[i,:].sum() / matrix[i,:].sum()
+                d_j = self._count_matrix[j,:].sum() / matrix[j,:].sum()
+                matrix_next[i,j] = (self._count_matrix[i,j] + self._count_matrix[j,i])/(d_i + d_j)
             matrix, matrix_next = matrix_next, matrix
         return make_stochastic(matrix)
 
@@ -74,3 +79,4 @@ def make_stochastic(matrix):
     if not np.all(row_sums > 0):
         raise InvalidValue('Input matrix contains all-zero rows.')
     return matrix / row_sums[:, np.newaxis]
+

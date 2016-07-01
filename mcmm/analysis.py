@@ -23,7 +23,7 @@ class MarkovStateModel:
         """Create new Markov State Model.
 
         Parameters:
-        transition_matrix: 2-dimensional numpy.ndarray where entry (a,b) contains transition probability a -> b
+        transition_matrix: pandas.DataFrame where entry (a,b) contains transition probability a -> b
         """
         if not self.is_stochastic_matrix(transition_matrix):
             raise InvalidValue('Transition matrix must be stochastic')
@@ -94,7 +94,7 @@ class MarkovStateModel:
     def backward_transition_matrix(self):
         if self._backward_transition_matrix is None:
             pi = self.stationary_distribution
-            self._backward_transition_matrix = self.transition_matrix.T * pi[np.newaxis,:] * (1/pi)[:,np.newaxis]
+            self._backward_transition_matrix = self.transition_matrix.T.mul(pi, axis=1).mul(1/pi, axis=0)
         return self._backward_transition_matrix
     
     @property
@@ -149,6 +149,10 @@ class MarkovStateModel:
         """
         if self._left_eigenvectors is None:
             self._eigenvalues, self._left_eigenvectors = np.linalg.eig(self.transition_matrix.T)
+            self._left_eigenvectors = pd.DataFrame([
+                pd.Series(x, index=self.transition_matrix.index)
+                for x in self._left_eigenvectors
+            ])
         return (self._eigenvalues, self._left_eigenvectors)
 
     def _right_eigen(self):
@@ -168,11 +172,11 @@ class MarkovStateModel:
         if not self.is_irreducible:
             raise InvalidOperation('Cannot compute stationary distribution of reducible Markov chain')
         eigenvalues, eigenvectors = self._left_eigen()
-        v = eigenvectors[:,np.isclose(eigenvalues, 1)].squeeze()
+        v = eigenvectors.iloc[:,np.isclose(eigenvalues, 1)].squeeze()
         assert(len(v.shape) == 1)
-        v_real = np.real(v)
+        v_real = v.apply(np.real)
         assert(np.allclose(v, v_real)) # result should be real
-        return v_real/sum(v_real)
+        return v_real/np.sum(v_real)
     
     def forward_committors(self, A, B):
         """Returns the vector of forward commitors from A to B"""
@@ -243,7 +247,7 @@ class MarkovStateModel:
             The restricted markov chain. Note that the states will be re-indexed to range [0, n]
         """
         assert(communication_class.closed)
-        return type(self)(self.transition_matrix[np.ix_(communication_class.states, communication_class.states)])
+        return type(self)(self.transition_matrix.iloc[communication_class.states, communication_class.states])
 
     @staticmethod
     def _commitors(A, B, T):
@@ -252,7 +256,7 @@ class MarkovStateModel:
         C = list(set(range(n)) - set().union(A, B))
         if C:
             M = T - np.identity(n)
-            d = np.sum(M.iloc[C,B])
+            d = np.sum(M.iloc[C,B], axis=1)
             solution = np.linalg.solve(M.iloc[C, C], -d)
         result = np.empty(n)
         c = 0
@@ -299,7 +303,7 @@ def component_is_closed(component, adjacency_matrix):
     """
     for a in component:
         for b in set(range(adjacency_matrix.shape[0])).difference(component):
-            if adjacency_matrix[a,b] > 0:
+            if adjacency_matrix.iat[a,b] > 0:
                 return False
     return True
 
