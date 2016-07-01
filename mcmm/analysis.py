@@ -110,30 +110,33 @@ class MarkovStateModel:
 
     @property
     def stationary_distribution(self):
+        """The unique stationary distribution. The Markov chain must be irreducible.
+        
+        Type: pandas.Series
+        """
         if self._stationary_distribution is None:
             self._stationary_distribution = self._find_stationary_distribution()
         return self._stationary_distribution
        
 
-    def left_eigenvector(self, k):
+    def left_eigenvectors(self, k=None):
         """Computes the first k eigenvectors for largest eigenvalues
-
-        Returns: eigenvalues    
+        
+        Arguments:
+        k: int
+            How many eigenvectors should be returned. Defaults to None, meaning all.
+        
+        Returns: [pandas.Series]    
         """
-        number_of_eigenvectors = k +1
-        ausgabe = np.zeros((len(self.transition_matrix),number_of_eigenvectors))
         eigenvalues, eigenvectors = self.left_eigen
-        for i in range (0,number_of_eigenvectors):
-            maxi = 0
-            jj = len(self.transition_matrix) + 10;
-            for j in range (0,len(self.transition_matrix)):
-                if(maxi < np.abs(eigenvalues[j])):
-                    maxi = np.abs(eigenvalues[j])
-                    jj = j
-            if(jj < len(self.transition_matrix)+ 1):
-                ausgabe[:,i] = eigenvectors[:,jj]
-                eigenvalues[jj] = 0
-        return ausgabe
+        if k is None:
+            k = len(eigenvalues)
+        output = [None] * k
+        for i in range(k):
+            jj = eigenvalues.argmax()
+            output[i] = eigenvectors.loc[:,jj]
+            eigenvalues[jj] = np.nan
+        return output
     
     
     @property
