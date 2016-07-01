@@ -9,6 +9,7 @@ from .common import *
 
 import numpy as np
 import msmtools.analysis
+import pandas as pd
 
 class CommunicationClass:
     def __init__(self, states, closed):
@@ -22,7 +23,8 @@ class MarkovStateModel:
         """Create new Markov State Model.
 
         Parameters:
-        transition_matrix: 2-dimensional numpy.ndarray where entry (a,b) contains transition probability a -> b
+        transition_matrix: pandas.DataFrame
+            Matrix where entry (a,b) contains transition probability a -> b
         """
         if not self.is_stochastic_matrix(transition_matrix):
             raise InvalidValue('Transition matrix must be stochastic')
@@ -40,6 +42,7 @@ class MarkovStateModel:
     @property
     def communication_classes(self):
         """The set of communication classes of the state space.
+        
         Returns: [CommunicationClass]
             List of communication classes sorted by size descending.
         """
@@ -86,22 +89,32 @@ class MarkovStateModel:
 
     @property
     def transition_matrix(self):
-        """The transition matrix where entry (a,b) denotes transition probability a->b"""
+        """The transition matrix where entry (a,b) denotes transition probability a->b.
+        
+        Returns: pandas.DataFrame
+        """
         return self._transition_matrix
     
     @property
     def backward_transition_matrix(self):
+        """The backwards transition matrix.
+        
+        Returns: pandas.DataFrame
+        """
         if self._backward_transition_matrix is None:
             pi = self.stationary_distribution
-            self._backward_transition_matrix = self.transition_matrix.T * pi[np.newaxis,:] * (1/pi)[:,np.newaxis]
+            self._backward_transition_matrix = self.transition_matrix.T.mul(pi, axis=1).mul(1/pi, axis=0)
         return self._backward_transition_matrix
     
     @property
     def period(self):
-        """Returns the period of the markov chain."""
+        """The period of the markov chain. The markov chain is required to be irreducible.
+        
+        Returns: int
+        """
         if not self.is_irreducible:
             raise InvalidOperation('Cannot compute period of reducible Markov chain')
-        eigenvalues, _ = self._left_eigen()
+        eigenvalues, _ = self.left_eigen
         norms = np.absolute(eigenvalues)
         period = np.count_nonzero(np.isclose(norms, 1))
         assert(period >= 1)
@@ -109,30 +122,33 @@ class MarkovStateModel:
 
     @property
     def stationary_distribution(self):
+        """The unique stationary distribution. The Markov chain must be irreducible.
+        
+        Type: pandas.Series
+        """
         if self._stationary_distribution is None:
             self._stationary_distribution = self._find_stationary_distribution()
         return self._stationary_distribution
        
 
-    def left_eigenvector(self, k):
+    def left_eigenvectors(self, k=None):
         """Computes the first k eigenvectors for largest eigenvalues
         
-        Returns: eigenvalues    
+        Arguments:
+        k: int
+            How many eigenvectors should be returned. Defaults to None, meaning all.
+        
+        Returns: [pandas.Series]    
         """
-        number_of_eigenvectors = k +1
-        ausgabe = np.zeros((len(self.transition_matrix),number_of_eigenvectors))
-        eigenvalues, eigenvectors = self._left_eigen()
-        for i in range (0,number_of_eigenvectors):
-            maxi = 0
-            jj = len(self.transition_matrix) + 10;
-            for j in range (0,len(self.transition_matrix)):
-                if(maxi < np.abs(eigenvalues[j])):
-                    maxi = np.abs(eigenvalues[j])
-                    jj = j
-            if(jj < len(self.transition_matrix)+ 1):
-                ausgabe[:,i] = eigenvectors[:,jj]
-                eigenvalues[jj] = 0
-        return ausgabe
+        eigenvalues, eigenvectors = self.left_eigen
+        if k is None:
+            k = len(eigenvalues)
+        output = [None] * k
+        for i in range(k):
+            jj = eigenvalues.argmax()
+            output[i] = eigenvectors.loc[:,jj]
+            eigenvalues[jj] = np.nan
+        return output
     
     
     @property
@@ -140,24 +156,34 @@ class MarkovStateModel:
         """Whether the markov chain is reversible"""
         return np.allclose(self.backward_transition_matrix, self.transition_matrix)
 
-    def _left_eigen(self):
+    @property
+    def left_eigen(self):
         """Finds the eigenvalues and left eigenvectors of the transition matrix.
         
-        Returns: (eigenvalues, eigenvectors)
+        Returns: (eigenvalues, eigenvectors) = (pandas.Series, pandas.DataFrame)
             where eigenvalues[i] corresponds to eigenvectors[:,i]
         """
         if self._left_eigenvectors is None:
             self._eigenvalues, self._left_eigenvectors = np.linalg.eig(self.transition_matrix.T)
+            self._left_eigenvectors = pd.DataFrame([
+                pd.Series(x, index=self.transition_matrix.index)
+                for x in self._left_eigenvectors
+            ])
         return (self._eigenvalues, self._left_eigenvectors)
 
-    def _right_eigen(self):
+    @property
+    def right_eigen(self):
         """Finds the eigenvalues and right eigenvectors of the transition matrix.
         
-        Returns: (eigenvalues, eigenvectors)
+        Returns: (eigenvalues, eigenvectors) = (pandas.Series, pandas.DataFrame)
             where eigenvalues[i] corresponds to eigenvectors[:,i]
         """
-        if not self._right_eigenvectors:
+        if self._right_eigenvectors is None:
             self._eigenvalues, self._right_eigenvectors = np.linalg.eig(self.transition_matrix)
+            self._right_eigenvectors = pd.DataFrame([
+                pd.Series(x, index=self.transition_matrix.index)
+                for x in self._left_eigenvectors
+            ])
         return (self._eigenvalues, self._right_eigenvectors)
             
     def _find_stationary_distribution(self):
@@ -166,15 +192,18 @@ class MarkovStateModel:
         """
         if not self.is_irreducible:
             raise InvalidOperation('Cannot compute stationary distribution of reducible Markov chain')
-        eigenvalues, eigenvectors = self._left_eigen()
-        v = eigenvectors[:,np.isclose(eigenvalues, 1)].squeeze()
+        eigenvalues, eigenvectors = self.left_eigen
+        v = eigenvectors.iloc[:,np.isclose(eigenvalues, 1)].squeeze()
         assert(len(v.shape) == 1)
-        v_real = np.real(v)
+        v_real = v.apply(np.real)
         assert(np.allclose(v, v_real)) # result should be real
-        return v_real/sum(v_real)
+        return v_real/np.sum(v_real)
     
     def forward_committors(self, A, B):
-        """Returns the vector of forward commitors from A to B"""
+        """Returns the vector of forward commitors from A to B
+        
+        Returns: pandas.Series
+        """
         return self._commitors(A, B, self.transition_matrix)
     
     def backward_commitors(self, A, B):
@@ -185,7 +214,7 @@ class MarkovStateModel:
         """Returns the probability current from A to B.
 
         Returns:
-        (n, n) ndarray containing the probabilty currents for every pair of states.
+        (n, n) pandas.DataFrame containing the probabilty currents for every pair of states.
         """
         result = np.zeros(self.transition_matrix.shape)
         fwd_commitors = self.forward_committors(A, B)
@@ -199,12 +228,13 @@ class MarkovStateModel:
         """Returns the effective probabiltiy current from A to B.
 
         Returns:
-        (n, n) ndarray containing the effective probabilty currents for every pair of states.
+        (n, n) pandas.DataFrame containing the effective probabilty currents for every pair of states.
         """
         current = self.probability_current(A, B)
-        result = np.zeros(current.shape)
-        for (i,j), value in np.ndenumerate(current):
-            result[i,j] = max(0, current[i,j]-current[j,i])
+        result = pd.DataFrame(np.zeros(current.shape))
+        for i, row in current.iterrows():
+            for j in row:
+                result.at[i,j] = max(0, current.at[i,j]-current.at[j,i])
         return result
 
     def transition_rate(self, A, B):
@@ -278,27 +308,26 @@ class MarkovStateModel:
             The restricted markov chain. Note that the states will be re-indexed to range [0, n]
         """
         assert(communication_class.closed)
-        return type(self)(self.transition_matrix[np.ix_(communication_class.states, communication_class.states)])
+        return type(self)(self.transition_matrix.iloc[communication_class.states, communication_class.states])
 
-    @staticmethod
-    def _commitors(A, B, T):
+    def _commitors(self, A, B, T):
         """Returns the vector of forward commitors from A to B given propagator T"""
         n = len(T)
         C = list(set(range(n)) - set().union(A, B))
         if C:
             M = T - np.identity(n)
-            d = np.sum(M[np.ix_(C, B)], axis=1)
-            solution = np.linalg.solve(M[np.ix_(C, C)], -d)
-        result = np.empty(n)
+            d = np.sum(M.iloc[C,B], axis=1)
+            solution = np.linalg.solve(M.iloc[C, C], -d)
+        result = pd.Series(np.empty(n), index=self.transition_matrix.index)
         c = 0
-        for i in range(n):
+        for i in result.index:
             if i in A:
-                result[i] = 0
+                result.at[i] = 0
             elif i in B:
-                result[i] = 1
+                result.at[i] = 1
             else:
-                result[i] = np.real(solution[c])
-                assert(np.isclose(result[i], solution[c])) # solution should be real
+                result.at[i] = np.real(solution[c])
+                assert(np.isclose(result.at[i], solution[c])) # solution should be real
                 c += 1
         return result
 
@@ -321,7 +350,7 @@ def depth_first_search(adjacency_matrix, root, flags):
     result = []
     flags[root] = True
     for vertex in range(adjacency_matrix.shape[0]):
-        if adjacency_matrix[root,vertex]:
+        if adjacency_matrix.iat[root, vertex]:
             if not flags[vertex]:
                 result += depth_first_search(adjacency_matrix, vertex, flags)
     result.append(root)
@@ -334,7 +363,7 @@ def component_is_closed(component, adjacency_matrix):
     """
     for a in component:
         for b in set(range(adjacency_matrix.shape[0])).difference(component):
-            if adjacency_matrix[a,b] > 0:
+            if adjacency_matrix.iat[a,b] > 0:
                 return False
     return True
 
