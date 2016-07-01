@@ -194,7 +194,7 @@ class MarkovStateModel:
         """Returns the probability current from A to B.
 
         Returns:
-        (n, n) ndarray containing the probabilty currents for every pair of states.
+        (n, n) pandas.DataFrame containing the probabilty currents for every pair of states.
         """
         result = np.zeros(self.transition_matrix.shape)
         fwd_commitors = self.forward_committors(A, B)
@@ -208,7 +208,7 @@ class MarkovStateModel:
         """Returns the effective probabiltiy current from A to B.
 
         Returns:
-        (n, n) ndarray containing the effective probabilty currents for every pair of states.
+        (n, n) pandas.DataFrame containing the effective probabilty currents for every pair of states.
         """
         current = self.probability_current(A, B)
         result = np.zeros(current.shape)
@@ -253,8 +253,7 @@ class MarkovStateModel:
         assert(communication_class.closed)
         return type(self)(self.transition_matrix.iloc[communication_class.states, communication_class.states])
 
-    @staticmethod
-    def _commitors(A, B, T):
+    def _commitors(self, A, B, T):
         """Returns the vector of forward commitors from A to B given propagator T"""
         n = len(T)
         C = list(set(range(n)) - set().union(A, B))
@@ -262,9 +261,9 @@ class MarkovStateModel:
             M = T - np.identity(n)
             d = np.sum(M.iloc[C,B], axis=1)
             solution = np.linalg.solve(M.iloc[C, C], -d)
-        result = np.empty(n)
+        result = pd.Series(np.empty(n))
         c = 0
-        for i in range(n):
+        for i in self.transition_matrix.index:
             if i in A:
                 result[i] = 0
             elif i in B:
