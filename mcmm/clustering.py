@@ -15,6 +15,8 @@ import numpy as np
 from scipy.spatial import distance
 from scipy.stats import rv_discrete
 
+from numba import jit,int32,float32
+
 #----------------
 #K-Means clustering
 #----------------
@@ -78,6 +80,7 @@ class KMeans(object):
     def cluster_dist(self,value):
         self._cluster_dist = value
 
+    @jit
     def fit(self):
         '''
         Runs the clustering iteration on the data it was given when initialized.
@@ -89,15 +92,15 @@ class KMeans(object):
         traj_list_indices = None
         if array_type is list:
             data, traj_list_indices = concat_list(self._data)
-            self._data = data
+            #self._data = data
 
-        cluster_centers = initialize_centers(self._data, self._k, self._method)
+        cluster_centers = initialize_centers(data, self._k, self._method)
 
         counter = 0
 
         while counter < self._max_iter:
-            cluster_labels, cluster_dist = get_cluster_info(self._data, cluster_centers, metric=self._metric)
-            new_cluster_centers = set_new_cluster_centers(self._data, cluster_labels, self._k)
+            cluster_labels, cluster_dist = get_cluster_info(data, cluster_centers, metric=self._metric)
+            new_cluster_centers = set_new_cluster_centers(data, cluster_labels, self._k)
             #break condition
             if np.allclose(cluster_centers, new_cluster_centers, self._atol, self._rtol):
                 print('terminated by break condition.')
@@ -106,13 +109,13 @@ class KMeans(object):
             cluster_centers = new_cluster_centers
             counter = counter+1
 
-        cluster_labels, cluster_dist = get_cluster_info(self._data, cluster_centers, metric=self._metric)
+        cluster_labels, cluster_dist = get_cluster_info(data, cluster_centers, metric=self._metric)
         print('%s iterations until termination.'%str(counter))
         self._cluster_centers = cluster_centers
         #cutting of labels according to given list
         if array_type is list:
-            cluster_labels = slice_labels(cluster_labels, traj_list_indices)
-            cluster_dist = slice_labels(cluster_dist,traj_list_indices)
+            cluster_labels=np.split(cluster_labels,traj_list_indices[:-1])
+            cluster_dist = np.split(cluster_dist, traj_list_indices[:-1])
         self._cluster_labels = cluster_labels
         self._cluster_dist = cluster_dist
 
@@ -125,7 +128,6 @@ class KMeans(object):
         Returns: cluster labels for passed data argument and cluster distances with respect to the given metric
         '''
         array_type = type(data)
-        traj_list_indices = None
         if array_type is list:
             data, traj_list_indices = concat_list(data)
 
@@ -137,8 +139,8 @@ class KMeans(object):
         cluster_labels, cluster_dist = get_cluster_info(data, self.cluster_centers, metric=self._metric)
 
         if array_type is list:
-            cluster_labels = slice_labels(cluster_labels,traj_list_indices)
-            cluster_dist = slice_labels(cluster_dist, traj_list_indices)
+            cluster_labels = np.split(cluster_labels, traj_list_indices[:-1])
+            cluster_dist = np.split(cluster_dist, traj_list_indices[:-1])
         return cluster_labels, cluster_dist
 
     def fit_transform(self,add_data):
@@ -247,9 +249,10 @@ class Regspace(object):
     def fit(self):
         '''
         performs regspace clustering on the data and provides cluster centers, clusterlabels and cluster distances
-        for the properties of the class of the instance
         '''
 
+        if type(self.data) is list:
+            raise NotImplementedError('Regspace module is not compatible with lists yet. Provide a single numpy array with data!')
         center_list = [self.data[0,:]]
         num_observations,d = self.data.shape
 
@@ -278,27 +281,17 @@ class Regspace(object):
 #global functions
 #--------------
 
+
 def concat_list(array_list):
     '''
     for a given list of ndarrays, concatenate to a single numpy array
     and also return number of observations in each array to make reshaping of
     cluster labeling according to passed lists possible
     '''
+
     traj_list_indices = [array.shape[0] for array in array_list]
-    traj_list_indices = np.cumsum([0] + traj_list_indices).tolist()
+    traj_list_indices = np.cumsum(traj_list_indices)
     return np.concatenate(array_list,axis=0), traj_list_indices
-
-def slice_labels(cluster_labels,traj_list_indices):
-    '''
-    slices a single cluster_label ndarray into several arrays stored in a list according
-    to passed traj_indices. uses together with concat_list() to slice the cluster labeling
-    after fitting
-    '''
-    sliced_labels = [cluster_labels[traj_list_indices[i]:traj_list_indices[i + 1]] \
-                      for i in range(len(traj_list_indices) - 1)]
-
-    return sliced_labels
-
 
 def get_cluster_info(data,cluster_centers,metric='euclidean'):
     '''
@@ -320,12 +313,13 @@ def get_cluster_info(data,cluster_centers,metric='euclidean'):
     cluster_dist = np.min(distance_matrix,axis=1)
     return cluster_labels, cluster_dist
 
+@jit
 def optimize_centroid(cluster_points):
     '''
     for a given set of observations in one cluster, compute and return a new centroid
     '''
     vecsum = np.sum(cluster_points,axis=0)
-    centroid = vecsum/cluster_points.shape[0]
+    centroid = np.divide(vecsum,cluster_points.shape[0])
     return centroid
 
 def set_new_cluster_centers(data,cluster_labels,k):
@@ -339,6 +333,7 @@ def set_new_cluster_centers(data,cluster_labels,k):
 
     return np.vstack(center_list)
 
+@jit
 def initialize_centers(data,k,method):
     '''
     initializes cluster centers with respect to given method
@@ -353,13 +348,14 @@ def initialize_centers(data,k,method):
 #---------
 #cluster center initializations
 #---------
-
+@jit
 def forgy_centers(data,k):
     '''
     returns k randomly chosen cluster centers from data
     '''
     return sample(list(data),k)
 
+@jit(float32[:,:]((float32)[:,:],int32))
 def kmeans_plusplus_centers(data,k):
     '''
     returns cluster centers initialized by kmeans++ method,
@@ -380,15 +376,16 @@ def kmeans_plusplus_centers(data,k):
         center_list = np.vstack([center_list,center_choice])
     return np.array(center_list)
 
+#@jit(float32[:](float32[:]))
 def D2_weighting(dist_array):
     '''
     performs the D^2-probability weighting on an ndarray of cluster distances associated to data points,
     see http://ilpubs.stanford.edu:8090/778/1/2006-13.pdf
     returns kmeans++ probability distribution vector
     '''
-    D2 = dist_array**2
+    D2 = np.square(dist_array)
     sum = np.sum(D2)
-    D2 = D2/sum
+    D2 = np.divide(D2,sum)
     return D2
 
 
