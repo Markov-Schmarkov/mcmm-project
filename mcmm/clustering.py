@@ -29,7 +29,7 @@ class KMeans(object):
     or list of trajectory ndarrays each with fitting second dimension d
     '''
 
-    def __init__(self,data,k,max_iter=150,method='kmeans++',metric='euclidean',atol=1e-03,rtol=1e-03):
+    def __init__(self,data,k,max_iter=150,method='kmeans++',metric='euclidean',atol=1e-03,rtol=1e-03,verbose=True):
         '''
         Args:
             data: (n,d)-shaped 2-dimensional ndarray objects containing float data or a list consisting of
@@ -51,6 +51,9 @@ class KMeans(object):
         self._cluster_labels = None
         self._cluster_dist = None
         self._traj_list_indices = None
+        self._verbose = verbose
+        self._fitted = False
+        self._data_type_list = None
 
         if self._metric != 'euclidean':
             print('Initialized with %s metric. Use euclidean metric for classic KMeans. \n'
@@ -86,13 +89,22 @@ class KMeans(object):
     @jit
     def fit(self):
         '''
-        Runs the clustering iteration on the data it was given when initialized.
+        Runs the clustering iteration on the data it was given when initialized. If the object is not fitted,
+        accessing .cluster_labels, .cluster_centers and .cluster_dist will also lead to a call of .fit().
 
         Cluster centers,cluster labels and distances to associated center for the given data will
-        be stored in the objects properties.
+        be stored in the objects properties. An initial list of data will return labels and
+        distances in lists accordingly to match the initial data list.
+
+        NOTE: multiple calls of .fit() are possible and will yield different outcomes, since KMeans
+        always has a random component due to its cluster initialization. Just accessing the properties
+        .cluster_labels, .cluster_centers and .cluster_dist will however NOT change the stored properties.
         '''
-        array_type = type(self._data)
-        if array_type is list:
+        if self._verbose:
+            start_time = timer()
+        if self._data_type_list is None:
+            self._data_type_list = type(self._data) is list
+        if self._data_type_list and not self._fitted:
             self._data, self._traj_list_indices = concat_list(self._data)
         cluster_centers = initialize_centers(self._data, self._k, self._method)
 
@@ -113,34 +125,44 @@ class KMeans(object):
         print('%s iterations until termination.'%str(counter))
         self._cluster_centers = cluster_centers
         #cutting of labels according to given list
-        if array_type is list:
+        if self._data_type_list:
             cluster_labels=np.split(cluster_labels,self._traj_list_indices[:-1])
             cluster_dist = np.split(cluster_dist,self._traj_list_indices[:-1])
         self._cluster_labels = cluster_labels
         self._cluster_dist = cluster_dist
+
+        self._fitted = True
+        if self._verbose:
+            elapsed_time = timer() - start_time
+            elapsed_time = timedelta(seconds=elapsed_time)
+            print('Finished after '+str(elapsed_time))
+            print('max within-cluster distance to center: %f'%np.max(self._cluster_dist))
+            print('mean within-cluster distance to center %f' %np.mean(self._cluster_dist))
+
 
     def transform(self,data):
         '''
         Returns cluster labeling for additional data corresponding
         to existing cluster centers stored in the object. (Also fits to initial data, if not fitted before)
         Args:
-            data: (n,d)-shaped ndarray or list consisting of ndarrays with same dimension d
-        Returns: cluster labels for passed data argument and cluster distances with respect to the given metric
+            data: (n,d)-shaped ndarray or list consisting of ndarrays each with matching second dimension d
+        Returns:
+            cluster labels for passed data argument and cluster distances with respect to the given metric
         '''
         array_type = type(data)
         if array_type is list:
             data, traj_list_indices = concat_list(data)
 
-
-        if self.cluster_centers is None or self.cluster_labels is None:
+        if not self._fitted:
             self.fit()
 
-        print(type(data))
         cluster_labels, cluster_dist = get_cluster_info(data, self.cluster_centers, metric=self._metric)
 
         if array_type is list:
             cluster_labels = np.split(cluster_labels, traj_list_indices[:-1])
             cluster_dist = np.split(cluster_dist, traj_list_indices[:-1])
+
+        self._fitted = True
         return cluster_labels, cluster_dist
 
 #-------------------
@@ -210,7 +232,8 @@ class Regspace(object):
         '''
         performs regspace clustering on the data and provides cluster centers, clusterlabels and cluster distances
         '''
-        start_time = timer()
+        if self._verbose:
+            start_time = timer()
 
         if self._data_type_list is None:
             self._data_type_list = type(self._data) is list
