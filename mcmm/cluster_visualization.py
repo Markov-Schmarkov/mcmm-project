@@ -33,6 +33,7 @@ class ClusterViz(object):
             20th observation from the data
         '''
 
+        color = 'grey'
         if feature_indices is None:
             n_features = self._cluster_object.data.shape[1]
             feature_indices = range(self._cluster_object.data.shape[1])
@@ -42,19 +43,35 @@ class ClusterViz(object):
             raise TypeError('feature_indices needs to be a list or None')
 
         if color_clusters:
-            c_ = np.append(self._cluster_object.cluster_labels)
-        else:
-            c = 'grey'
-
+            if type(self._cluster_object.cluster_labels) is list:
+                color = np.concatenate(self._cluster_object.cluster_labels,axis=0)
+            else:
+                color = self._cluster_object.cluster_labels
+        print(color)
         if n_features == 2:
             fig = plt.figure()
             x = self._cluster_object.data[::sample_rate,feature_indices[0]]
             y = self._cluster_object.data[::sample_rate,feature_indices[1]]
-            plt.scatter(x,y,c=c)
+            plt.scatter(x,y,c=color)
             if mark_centers:
                 x = self._cluster_object.cluster_centers[:,feature_indices[0]]
                 y = self._cluster_object.cluster_centers[:,feature_indices[1]]
                 plt.scatter(x,y,c='r',s=50)
+        elif n_features == 3:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            x = self._cluster_object.data[::sample_rate,feature_indices[0]]
+            y = self._cluster_object.data[::sample_rate,feature_indices[1]]
+            z = self._cluster_object.data[::sample_rate,feature_indices[2]]
+            ax.scatter(x,y,z,c=color)
+            if mark_centers:
+                x = self._cluster_object.cluster_centers[:,feature_indices[0]]
+                y = self._cluster_object.cluster_centers[:,feature_indices[1]]
+                z = self._cluster_object.cluster_centers[:,feature_indices[2]]
+                ax.scatter(x,y,z,c='r',s=50)
+
+        else:
+            raise ValueError('Not able to plot with given features')
         plt.show()
 
 #-------------------------------
