@@ -37,6 +37,7 @@ class MarkovStateModel:
         self._is_aperiodic = None
         self._eigenvalues = None
         self._left_eigenvectors = None
+        self._right_eigenvectors = None
         self._communication_classes = None
 
     @property
@@ -132,29 +133,49 @@ class MarkovStateModel:
        
 
     def left_eigenvectors(self, k=None):
-        """Computes the first k eigenvectors for largest eigenvalues
+        """Computes the first k left eigenvectors for largest eigenvalues
         
         Arguments:
         k: int
             How many eigenvectors should be returned. Defaults to None, meaning all.
         
-        Returns: [pandas.Series]    
+        Returns: pandas.DataFrame
+            DataFrame containing the eigenvectors as columns
         """
-        eigenvalues, eigenvectors = self.left_eigen
         if k is None:
-            k = len(eigenvalues)
-        output = [None] * k
-        for i in range(k):
-            jj = eigenvalues.argmax()
-            output[i] = eigenvectors.loc[:,jj]
-            eigenvalues[jj] = np.nan
-        return output
+            k = len(self.transition_matrix)
+        return self.left_eigen[1].iloc[:,:k]
     
+    def right_eigenvectors(self, k=None):
+        """Computes the first k right eigenvectors for largest eigenvalues
+        
+        Arguments:
+        k: int
+            How many eigenvectors should be returned. Defaults to None, meaning all.
+        
+        Returns: pandas.DataFrame
+            DataFrame containing the eigenvectors as columns
+        """
+        if k is None:
+            k = len(self.transition_matrix)
+        return self.right_eigen[1].iloc[:,:k]
     
     @property
     def is_reversible(self):
         """Whether the markov chain is reversible"""
         return np.allclose(self.backward_transition_matrix, self.transition_matrix)
+    
+    def _right_eigen(self, matrix):
+        eigenvalues, eigenvectors = np.linalg.eig(matrix)
+        # sort by eigenvalues descending:
+        eigenvalues, eigenvectors = zip(*(
+            sorted(zip(eigenvalues, eigenvectors.T), key=lambda x: np.real(x[0]), reverse=True)
+        ))
+        eigenvectors = pd.concat([
+            pd.Series(x, index=matrix.index)
+            for x in eigenvectors
+        ], axis=1)
+        return (eigenvalues, eigenvectors)
 
     @property
     def left_eigen(self):
@@ -164,11 +185,7 @@ class MarkovStateModel:
             where eigenvalues[i] corresponds to eigenvectors[:,i]
         """
         if self._left_eigenvectors is None:
-            self._eigenvalues, self._left_eigenvectors = np.linalg.eig(self.transition_matrix.T)
-            self._left_eigenvectors = pd.DataFrame([
-                pd.Series(x, index=self.transition_matrix.index)
-                for x in self._left_eigenvectors
-            ])
+            self._eigenvalues, self._left_eigenvectors = self._right_eigen(self.transition_matrix.T)
         return (self._eigenvalues, self._left_eigenvectors)
 
     @property
@@ -179,11 +196,7 @@ class MarkovStateModel:
             where eigenvalues[i] corresponds to eigenvectors[:,i]
         """
         if self._right_eigenvectors is None:
-            self._eigenvalues, self._right_eigenvectors = np.linalg.eig(self.transition_matrix)
-            self._right_eigenvectors = pd.DataFrame([
-                pd.Series(x, index=self.transition_matrix.index)
-                for x in self._left_eigenvectors
-            ])
+            self._eigenvalues, self._right_eigenvectors = self._right_eigen(self.transition_matrix)
         return (self._eigenvalues, self._right_eigenvectors)
             
     def _find_stationary_distribution(self):
@@ -308,7 +321,7 @@ class MarkovStateModel:
             The restricted markov chain. Note that the states will be re-indexed to range [0, n]
         """
         assert(communication_class.closed)
-        return type(self)(self.transition_matrix.iloc[communication_class.states, communication_class.states])
+        return type(self)(self.transition_matrix.loc[communication_class.states, communication_class.states])
 
     def _commitors(self, A, B, T):
         """Returns the vector of forward commitors from A to B given propagator T"""
@@ -340,11 +353,11 @@ def depth_first_search(adjacency_matrix, root, flags):
     """Performs depth-first search on a digraph.
     
     Parameters:
-    adjacency_matrix: numpy.ndarray of shape (n, n) containing node-node adjancencies.
-    root: Root node
+    adjacency_matrix: pandas.DataFrame containing node-node adjancencies.
+    root: Root node index
     flags: List of vertex flags. All vertices whose flag is initially set are ignored. After return the flags of all found vertices will be set.
     
-    Returns a list of all nodes reachable from root sorted by
+    Returns a list of all node indices reachable from root sorted by
     post-order traversal.
     """
     result = []
@@ -362,8 +375,8 @@ def component_is_closed(component, adjacency_matrix):
     edges pointing out of the component
     """
     for a in component:
-        for b in set(range(adjacency_matrix.shape[0])).difference(component):
-            if adjacency_matrix.iat[a,b] > 0:
+        for b in set(adjacency_matrix.index).difference(component):
+            if adjacency_matrix.at[a,b] > 0:
                 return False
     return True
 
@@ -372,9 +385,9 @@ def strongly_connected_components(adjacency_matrix):
     """Finds all strongly connected components of a digraph.
     
     Parameters:
-    adjacency_matrix: numpy.ndarray of shape (n, n) containing node-node adjancencies.
+    adjacency_matrix: pandas.DataFrame containing node-node adjancencies.
     
-    Returns a list of strongly connected components, each of which is a list of vertices.
+    Returns a list of strongly connected components, each of which is a list of vertex labels.
     """
     nodes = range(adjacency_matrix.shape[0])
     flags = [False] * len(nodes)
@@ -386,9 +399,10 @@ def strongly_connected_components(adjacency_matrix):
     components = []
     for node in reversed(node_list):
         if not flags[node]:
-            components.append(depth_first_search(adjacency_matrix.T, node, flags))
+            components.append([adjacency_matrix.index[i] for i in depth_first_search(adjacency_matrix.T, node, flags)])
     return components
-    
+
+
 def gcd(a, b):
     while b != 0:
         b, a = a%b, b

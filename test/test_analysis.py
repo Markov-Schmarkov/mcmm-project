@@ -57,7 +57,7 @@ def test_strongly_connected_components():
     for c1, c2 in zip(components, components[1:]):
         for v1 in c1:
             for v2 in c2:
-                assert_true(matrix[v1,v2] == 0 or matrix[v2,v1] == 0)
+                assert_true(matrix.at[v1,v2] == 0 or matrix.at[v2,v1] == 0)
     assert_equals(set(range(nodes)), set().union(*components))
 
 
@@ -247,21 +247,18 @@ def test_restriction():
         [  0, 0.4, 0.5, 0.1],
         [  0, 0.1, 0.7, 0.2],
         [  0, 0.6, 0.1, 0.3]
-    ])
+    ], index=['a', 'b', 'c', 'd'], columns=['a', 'b', 'c', 'd'])
     msm = ana.MarkovStateModel(matrix)
     classes = msm.communication_classes
     assert_equals(len(classes), 2)
     assert_false(classes[1].closed)
     assert_true(classes[0].closed)
-    assert_equals(classes[1].states, [0])
-    assert_equals(classes[0].states, [1, 2, 3])
+    assert_equals(classes[1].states, ['a'])
+    assert_equals(classes[0].states, ['b', 'c', 'd'])
     msm2 = msm.restriction(classes[0])
-    print(msm2.transition_matrix)
-    print(matrix)
-    print(msm.transition_matrix)
-    pdt.assert_frame_equal(msm2.transition_matrix, pd.DataFrame.from_items({
-        1: [0.4, 0.5, 0.1],
-        2: [0.1, 0.7, 0.2],
-        3: [0.6, 0.1, 0.3]
-    }.items(), orient='index', columns=[1, 2, 3]))
+    pdt.assert_frame_equal(msm2.transition_matrix, pd.DataFrame([
+        [0.4, 0.5, 0.1],
+        [0.1, 0.7, 0.2],
+        [0.6, 0.1, 0.3]
+    ], index=['b', 'c', 'd'], columns=['b', 'c', 'd']))
 
