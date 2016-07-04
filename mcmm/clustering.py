@@ -13,7 +13,7 @@ from scipy.spatial import distance
 from scipy.stats import rv_discrete
 from timeit import default_timer as timer
 from datetime import timedelta
-import cluster_visualization
+from . import cluster_visualization
 from numba import jit,int32,float32
 
 #----------------

@@ -1,4 +1,4 @@
-import clustering as cl
+from . import clustering as cl
 import numpy as np
 from sklearn.datasets import make_classification
 from sklearn.datasets.samples_generator import make_blobs
