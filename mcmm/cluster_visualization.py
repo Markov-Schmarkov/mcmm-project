@@ -47,7 +47,7 @@ class ClusterViz(object):
                 color = np.concatenate(self._cluster_object.cluster_labels,axis=0)
             else:
                 color = self._cluster_object.cluster_labels
-        print(color)
+            color = color[::sample_rate]
         if n_features == 2:
             fig = plt.figure()
             x = self._cluster_object.data[::sample_rate,feature_indices[0]]
@@ -71,7 +71,7 @@ class ClusterViz(object):
                 ax.scatter(x,y,z,c='r',s=50)
 
         else:
-            raise ValueError('Not able to plot with given features')
+            raise ValueError('Not able to plot with given feature_indices')
         plt.show()
 
 #-------------------------------
