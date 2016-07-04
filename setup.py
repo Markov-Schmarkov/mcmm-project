@@ -17,7 +17,7 @@ setup(
     author='',
     author_email='',
     packages=['mcmm'],
-    install_requires=['numpy', 'msmtools>=1.0', 'matplotlib', 'scipy', 'pandas','numba'],
+    install_requires=['numpy', 'msmtools>=1.0', 'matplotlib', 'scipy', 'pandas'],
     tests_require=['nose'],
     test_suite='nose.collector'
 )
