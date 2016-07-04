@@ -14,6 +14,7 @@ from scipy.stats import rv_discrete
 from timeit import default_timer as timer
 from datetime import timedelta
 from . import cluster_visualization
+from numba import jit,int32,float32
 
 #----------------
 #K-Means clustering
@@ -91,6 +92,7 @@ class KMeans(object):
         return self._data
 
 
+    @jit
     def fit(self):
         '''
         Runs the clustering iteration on the data it was given when initialized. If the object is not fitted,
@@ -238,7 +240,7 @@ class Regspace(object):
     def data(self):
         return self._data
 
-
+    @jit
     def fit(self):
         '''
         performs regspace clustering on the data and provides cluster centers, clusterlabels and cluster distances
@@ -320,7 +322,7 @@ def get_cluster_info(data,cluster_centers,metric='euclidean'):
     cluster_dist = np.min(distance_matrix,axis=1)
     return cluster_labels, cluster_dist
 
-
+@jit
 def optimize_centroid(cluster_points):
     '''
     for a given set of observations in one cluster, compute and return a new centroid
@@ -354,14 +356,14 @@ def initialize_centers(data,k,method):
 #---------
 #cluster center initializations
 #---------
-
+@jit
 def forgy_centers(data,k):
     '''
     returns k randomly chosen cluster centers from data
     '''
     return sample(list(data),k)
 
-
+@jit(float32[:,:]((float32)[:,:],int32))
 def kmeans_plusplus_centers(data,k):
     '''
     returns cluster centers initialized by kmeans++ method,
@@ -382,7 +384,7 @@ def kmeans_plusplus_centers(data,k):
         center_list = np.vstack([center_list,center_choice])
     return np.array(center_list)
 
-
+#@jit(float32[:](float32[:]))
 def D2_weighting(dist_array):
     '''
     performs the D^2-probability weighting on an ndarray of cluster distances associated to data points,
