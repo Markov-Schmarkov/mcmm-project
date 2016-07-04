@@ -302,7 +302,7 @@ class MarkovStateModel:
         
         Arguments:
         communication_class: CommunicationClass
-            The model’s communication classes that the result should be restricted to. Required to be closed.
+            The model's communication classes that the result should be restricted to. Required to be closed.
         
         Returns: MarkovStateModel
             The restricted markov chain. Note that the states will be re-indexed to range [0, n]
