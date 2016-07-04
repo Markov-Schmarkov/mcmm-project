@@ -272,6 +272,8 @@ class MarkovStateModel:
         clusters : (n, m) ndarray
             Membership vectors. clusters[i, j] contains the membership probability of state i to metastable state j.
         """
+        if not self.is_reversible:
+            raise InvalidOperation('Can not perform PCCA on non-reversible markov chain.')
         return msmtools.analysis.pcca(self.transition_matrix, num_sets)
     
     def metastable_set_assignments(self, num_sets):
