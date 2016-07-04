@@ -4,9 +4,6 @@ This module should handle the discretization by means of a kmeans or regspace cl
 
 #TODO exception handling
 #TODO forgy initialization throws invalid cluster centers for input data containing identical points
-#TODO omit vstack in KMeans fit_transform
-#TODO regspace transform, regspace fit_transform
-#TODO regspace comments, regspace testing
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 __metaclass__ = type
@@ -16,7 +13,7 @@ from scipy.spatial import distance
 from scipy.stats import rv_discrete
 from timeit import default_timer as timer
 from datetime import timedelta
-
+import cluster_visualization
 from numba import jit,int32,float32
 
 #----------------
@@ -29,7 +26,7 @@ class KMeans(object):
     or list of trajectory ndarrays each with fitting second dimension d
     '''
 
-    def __init__(self,data,k,max_iter=150,method='kmeans++',metric='euclidean',atol=1e-03,rtol=1e-03,verbose=True):
+    def __init__(self,data,k,max_iter=150,method="forgy",metric='euclidean',atol=1e-03,rtol=1e-03,verbose=True):
         '''
         Args:
             data: (n,d)-shaped 2-dimensional ndarray objects containing float data or a list consisting of
@@ -85,6 +82,15 @@ class KMeans(object):
     @cluster_dist.setter
     def cluster_dist(self,value):
         self._cluster_dist = value
+
+    @property
+    def fitted(self):
+        return self._fitted
+
+    @property
+    def data(self):
+        return self._data
+
 
     @jit
     def fit(self):
@@ -227,6 +233,13 @@ class Regspace(object):
     def cluster_dist(self, value):
         self._cluster_dist = value
 
+    @property
+    def fitted(self):
+        return self._fitted
+    @property
+    def data(self):
+        return self._data
+
     @jit
     def fit(self):
         '''
@@ -329,7 +342,6 @@ def set_new_cluster_centers(data,cluster_labels,k):
 
     return np.vstack(center_list)
 
-@jit
 def initialize_centers(data,k,method):
     '''
     initializes cluster centers with respect to given method
