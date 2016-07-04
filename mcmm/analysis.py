@@ -144,7 +144,7 @@ class MarkovStateModel:
         """
         if k is None:
             k = len(self.transition_matrix)
-        return self.left_eigen[1][:,:k]
+        return self.left_eigen[1].iloc[:,:k]
     
     def right_eigenvectors(self, k=None):
         """Computes the first k right eigenvectors for largest eigenvalues
@@ -158,7 +158,7 @@ class MarkovStateModel:
         """
         if k is None:
             k = len(self.transition_matrix)
-        return self.right_eigen[1][:,:k]
+        return self.right_eigen[1].iloc[:,:k]
     
     @property
     def is_reversible(self):
@@ -196,7 +196,7 @@ class MarkovStateModel:
             where eigenvalues[i] corresponds to eigenvectors[:,i]
         """
         if self._right_eigenvectors is None:
-            self._eigenvalues, self._left_eigenvectors = self._right_eigen(self.transition_matrix)
+            self._eigenvalues, self._right_eigenvectors = self._right_eigen(self.transition_matrix)
         return (self._eigenvalues, self._right_eigenvectors)
             
     def _find_stationary_distribution(self):
