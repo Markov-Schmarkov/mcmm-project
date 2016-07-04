@@ -321,7 +321,7 @@ class MarkovStateModel:
             The restricted markov chain. Note that the states will be re-indexed to range [0, n]
         """
         assert(communication_class.closed)
-        return type(self)(self.transition_matrix.iloc[communication_class.states, communication_class.states])
+        return type(self)(self.transition_matrix.loc[communication_class.states, communication_class.states])
 
     def _commitors(self, A, B, T):
         """Returns the vector of forward commitors from A to B given propagator T"""
@@ -353,11 +353,11 @@ def depth_first_search(adjacency_matrix, root, flags):
     """Performs depth-first search on a digraph.
     
     Parameters:
-    adjacency_matrix: numpy.ndarray of shape (n, n) containing node-node adjancencies.
-    root: Root node
+    adjacency_matrix: pandas.DataFrame containing node-node adjancencies.
+    root: Root node index
     flags: List of vertex flags. All vertices whose flag is initially set are ignored. After return the flags of all found vertices will be set.
     
-    Returns a list of all nodes reachable from root sorted by
+    Returns a list of all node indices reachable from root sorted by
     post-order traversal.
     """
     result = []
@@ -375,8 +375,8 @@ def component_is_closed(component, adjacency_matrix):
     edges pointing out of the component
     """
     for a in component:
-        for b in set(range(adjacency_matrix.shape[0])).difference(component):
-            if adjacency_matrix.iat[a,b] > 0:
+        for b in set(adjacency_matrix.index).difference(component):
+            if adjacency_matrix.at[a,b] > 0:
                 return False
     return True
 
@@ -385,9 +385,9 @@ def strongly_connected_components(adjacency_matrix):
     """Finds all strongly connected components of a digraph.
     
     Parameters:
-    adjacency_matrix: numpy.ndarray of shape (n, n) containing node-node adjancencies.
+    adjacency_matrix: pandas.DataFrame containing node-node adjancencies.
     
-    Returns a list of strongly connected components, each of which is a list of vertices.
+    Returns a list of strongly connected components, each of which is a list of vertex labels.
     """
     nodes = range(adjacency_matrix.shape[0])
     flags = [False] * len(nodes)
@@ -399,9 +399,10 @@ def strongly_connected_components(adjacency_matrix):
     components = []
     for node in reversed(node_list):
         if not flags[node]:
-            components.append(depth_first_search(adjacency_matrix.T, node, flags))
+            components.append([adjacency_matrix.index[i] for i in depth_first_search(adjacency_matrix.T, node, flags)])
     return components
-    
+
+
 def gcd(a, b):
     while b != 0:
         b, a = a%b, b
