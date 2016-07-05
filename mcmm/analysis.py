@@ -9,6 +9,7 @@ from .common import *
 
 import numpy as np
 import msmtools.analysis
+import pandas as pd
 
 class CommunicationClass:
     def __init__(self, states, closed):
@@ -22,7 +23,8 @@ class MarkovStateModel:
         """Create new Markov State Model.
 
         Parameters:
-        transition_matrix: 2-dimensional numpy.ndarray where entry (a,b) contains transition probability a -> b
+        transition_matrix: pandas.DataFrame
+            Matrix where entry (a,b) contains transition probability a -> b
         """
         if not self.is_stochastic_matrix(transition_matrix):
             raise InvalidValue('Transition matrix must be stochastic')
@@ -35,11 +37,13 @@ class MarkovStateModel:
         self._is_aperiodic = None
         self._eigenvalues = None
         self._left_eigenvectors = None
+        self._right_eigenvectors = None
         self._communication_classes = None
 
     @property
     def communication_classes(self):
         """The set of communication classes of the state space.
+        
         Returns: [CommunicationClass]
             List of communication classes sorted by size descending.
         """
@@ -86,22 +90,32 @@ class MarkovStateModel:
 
     @property
     def transition_matrix(self):
-        """The transition matrix where entry (a,b) denotes transition probability a->b"""
+        """The transition matrix where entry (a,b) denotes transition probability a->b.
+        
+        Returns: pandas.DataFrame
+        """
         return self._transition_matrix
     
     @property
     def backward_transition_matrix(self):
+        """The backwards transition matrix.
+        
+        Returns: pandas.DataFrame
+        """
         if self._backward_transition_matrix is None:
             pi = self.stationary_distribution
-            self._backward_transition_matrix = self.transition_matrix.T * pi[np.newaxis,:] * (1/pi)[:,np.newaxis]
+            self._backward_transition_matrix = self.transition_matrix.T.mul(pi, axis=1).mul(1/pi, axis=0)
         return self._backward_transition_matrix
     
     @property
     def period(self):
-        """Returns the period of the markov chain."""
+        """The period of the markov chain. The markov chain is required to be irreducible.
+        
+        Returns: int
+        """
         if not self.is_irreducible:
             raise InvalidOperation('Cannot compute period of reducible Markov chain')
-        eigenvalues, _ = self._left_eigen()
+        eigenvalues, _ = self.left_eigen
         norms = np.absolute(eigenvalues)
         period = np.count_nonzero(np.isclose(norms, 1))
         assert(period >= 1)
@@ -109,55 +123,80 @@ class MarkovStateModel:
 
     @property
     def stationary_distribution(self):
+        """The unique stationary distribution. The Markov chain must be irreducible.
+        
+        Type: pandas.Series
+        """
         if self._stationary_distribution is None:
             self._stationary_distribution = self._find_stationary_distribution()
         return self._stationary_distribution
        
 
-    def left_eigenvector(self, k):
-        """Computes the first k eigenvectors for largest eigenvalues
+    def left_eigenvectors(self, k=None):
+        """Computes the first k left eigenvectors for largest eigenvalues
         
-        Returns: eigenvalues    
+        Arguments:
+        k: int
+            How many eigenvectors should be returned. Defaults to None, meaning all.
+        
+        Returns: pandas.DataFrame
+            DataFrame containing the eigenvectors as columns
         """
-        number_of_eigenvectors = k +1
-        ausgabe = np.zeros((len(self.transition_matrix),number_of_eigenvectors))
-        eigenvalues, eigenvectors = self._left_eigen()
-        for i in range (0,number_of_eigenvectors):
-            maxi = 0
-            jj = len(self.transition_matrix) + 10;
-            for j in range (0,len(self.transition_matrix)):
-                if(maxi < np.abs(eigenvalues[j])):
-                    maxi = np.abs(eigenvalues[j])
-                    jj = j
-            if(jj < len(self.transition_matrix)+ 1):
-                ausgabe[:,i] = eigenvectors[:,jj]
-                eigenvalues[jj] = 0
-        return ausgabe
+        if k is None:
+            k = len(self.transition_matrix)
+        return self.left_eigen[1].iloc[:,:k]
     
+    def right_eigenvectors(self, k=None):
+        """Computes the first k right eigenvectors for largest eigenvalues
+        
+        Arguments:
+        k: int
+            How many eigenvectors should be returned. Defaults to None, meaning all.
+        
+        Returns: pandas.DataFrame
+            DataFrame containing the eigenvectors as columns
+        """
+        if k is None:
+            k = len(self.transition_matrix)
+        return self.right_eigen[1].iloc[:,:k]
     
     @property
     def is_reversible(self):
         """Whether the markov chain is reversible"""
         return np.allclose(self.backward_transition_matrix, self.transition_matrix)
+    
+    def _right_eigen(self, matrix):
+        eigenvalues, eigenvectors = np.linalg.eig(matrix)
+        # sort by eigenvalues descending:
+        eigenvalues, eigenvectors = zip(*(
+            sorted(zip(eigenvalues, eigenvectors.T), key=lambda x: np.real(x[0]), reverse=True)
+        ))
+        eigenvectors = pd.concat([
+            pd.Series(x, index=matrix.index)
+            for x in eigenvectors
+        ], axis=1)
+        return (eigenvalues, eigenvectors)
 
-    def _left_eigen(self):
+    @property
+    def left_eigen(self):
         """Finds the eigenvalues and left eigenvectors of the transition matrix.
         
-        Returns: (eigenvalues, eigenvectors)
+        Returns: (eigenvalues, eigenvectors) = (pandas.Series, pandas.DataFrame)
             where eigenvalues[i] corresponds to eigenvectors[:,i]
         """
-        if not self._left_eigenvectors:
-            self._eigenvalues, self._left_eigenvectors = np.linalg.eig(self.transition_matrix.T)
+        if self._left_eigenvectors is None:
+            self._eigenvalues, self._left_eigenvectors = self._right_eigen(self.transition_matrix.T)
         return (self._eigenvalues, self._left_eigenvectors)
 
-    def _right_eigen(self):
+    @property
+    def right_eigen(self):
         """Finds the eigenvalues and right eigenvectors of the transition matrix.
         
-        Returns: (eigenvalues, eigenvectors)
+        Returns: (eigenvalues, eigenvectors) = (pandas.Series, pandas.DataFrame)
             where eigenvalues[i] corresponds to eigenvectors[:,i]
         """
-        if not self._right_eigenvectors:
-            self._eigenvalues, self._right_eigenvectors = np.linalg.eig(self.transition_matrix)
+        if self._right_eigenvectors is None:
+            self._eigenvalues, self._right_eigenvectors = self._right_eigen(self.transition_matrix)
         return (self._eigenvalues, self._right_eigenvectors)
             
     def _find_stationary_distribution(self):
@@ -166,15 +205,18 @@ class MarkovStateModel:
         """
         if not self.is_irreducible:
             raise InvalidOperation('Cannot compute stationary distribution of reducible Markov chain')
-        eigenvalues, eigenvectors = self._left_eigen()
-        v = eigenvectors[:,np.isclose(eigenvalues, 1)].squeeze()
+        eigenvalues, eigenvectors = self.left_eigen
+        v = eigenvectors.iloc[:,np.isclose(eigenvalues, 1)].squeeze()
         assert(len(v.shape) == 1)
-        v_real = np.real(v)
+        v_real = v.apply(np.real)
         assert(np.allclose(v, v_real)) # result should be real
-        return v_real/sum(v_real)
+        return v_real/np.sum(v_real)
     
     def forward_committors(self, A, B):
-        """Returns the vector of forward commitors from A to B"""
+        """Returns the vector of forward commitors from A to B
+        
+        Returns: pandas.Series
+        """
         return self._commitors(A, B, self.transition_matrix)
     
     def backward_commitors(self, A, B):
@@ -185,7 +227,7 @@ class MarkovStateModel:
         """Returns the probability current from A to B.
 
         Returns:
-        (n, n) ndarray containing the probabilty currents for every pair of states.
+        (n, n) pandas.DataFrame containing the probabilty currents for every pair of states.
         """
         result = np.zeros(self.transition_matrix.shape)
         fwd_commitors = self.forward_committors(A, B)
@@ -199,12 +241,13 @@ class MarkovStateModel:
         """Returns the effective probabiltiy current from A to B.
 
         Returns:
-        (n, n) ndarray containing the effective probabilty currents for every pair of states.
+        (n, n) pandas.DataFrame containing the effective probabilty currents for every pair of states.
         """
         current = self.probability_current(A, B)
-        result = np.zeros(current.shape)
-        for (i,j), value in np.ndenumerate(current):
-            result[i,j] = max(0, current[i,j]-current[j,i])
+        result = pd.DataFrame(np.zeros(current.shape))
+        for i, row in current.iterrows():
+            for j in row:
+                result.at[i,j] = max(0, current.at[i,j]-current.at[j,i])
         return result
 
     def transition_rate(self, A, B):
@@ -219,7 +262,7 @@ class MarkovStateModel:
         return 1/self.transition_rate(A, B)
 
     def pcca(self, num_sets):
-        """Compute meta-stable sets using PCCA++ and return the membership of all states to these sets.
+        """Compute membership probability matrix using PCCA++.
 
         Arguments:
         num_sets: integer
@@ -227,42 +270,79 @@ class MarkovStateModel:
 
         Returns:
         clusters : (n, m) ndarray
-            Membership vectors. clusters[i, j] contains the membership of state i to metastable state j.
+            Membership vectors. clusters[i, j] contains the membership probability of state i to metastable state j.
         """
+        if not self.is_reversible:
+            raise InvalidOperation('Can not perform PCCA on non-reversible markov chain.')
         return msmtools.analysis.pcca(self.transition_matrix, num_sets)
+    
+    def metastable_set_assignments(self, num_sets):
+        """Performs PCCA++ and returns assignment vector, i.e. a vector with num_states entries,
+        that are the most probable metastable set for every corresponding state.
+        
+        TODO: raise error, when num_sets is smaller than num_states.
+
+        Arguments:
+        num_sets: integer
+            Number of metastable sets
+
+        Returns:
+        (n, 1) ndarray (vector) containing the assignments of each state i (index) to a metastable set (value).
+        """
+        pcca_mat = self.pcca(num_sets)
+        return np.array([np.argmax(pcca_mat[i, :]) for i in range(self._num_states)])
+
+    def metastable_sets(self, num_sets):
+        """Performs PCCA++ and returns the metastable sets.
+        
+        TODO: raise error, when num_sets is smaller than num_states.
+
+        Arguments:
+        num_sets: integer
+            Number of metastable sets
+
+        Returns:
+        List of (n, 1) ndarrays (vectors), which are the states belonging to the corresponding metastable set.
+        """
+        pcca_mat = self.pcca(num_sets)
+        sets = []
+        for i in range(num_sets):
+            sets.append([])
+        for i in range(self._num_states):
+            sets[np.argmax(pcca_mat[i, :])].append(i)
+        return sets
     
     def restriction(self, communication_class):
         """Returns the restriction of the model to a single communication class.
         
         Arguments:
         communication_class: CommunicationClass
-            The model’s communication classes that the result should be restricted to. Required to be closed.
+            The model's communication classes that the result should be restricted to. Required to be closed.
         
         Returns: MarkovStateModel
             The restricted markov chain. Note that the states will be re-indexed to range [0, n]
         """
         assert(communication_class.closed)
-        return type(self)(self.transition_matrix[np.ix_(communication_class.states, communication_class.states)])
+        return type(self)(self.transition_matrix.loc[communication_class.states, communication_class.states])
 
-    @staticmethod
-    def _commitors(A, B, T):
+    def _commitors(self, A, B, T):
         """Returns the vector of forward commitors from A to B given propagator T"""
         n = len(T)
         C = list(set(range(n)) - set().union(A, B))
         if C:
             M = T - np.identity(n)
-            d = np.sum(M[np.ix_(C, B)], axis=1)
-            solution = np.linalg.solve(M[np.ix_(C, C)], -d)
-        result = np.empty(n)
+            d = np.sum(M.iloc[C,B], axis=1)
+            solution = np.linalg.solve(M.iloc[C, C], -d)
+        result = pd.Series(np.empty(n), index=self.transition_matrix.index)
         c = 0
-        for i in range(n):
+        for i in result.index:
             if i in A:
-                result[i] = 0
+                result.at[i] = 0
             elif i in B:
-                result[i] = 1
+                result.at[i] = 1
             else:
-                result[i] = np.real(solution[c])
-                assert(np.isclose(result[i], solution[c])) # solution should be real
+                result.at[i] = np.real(solution[c])
+                assert(np.isclose(result.at[i], solution[c])) # solution should be real
                 c += 1
         return result
 
@@ -275,17 +355,17 @@ def depth_first_search(adjacency_matrix, root, flags):
     """Performs depth-first search on a digraph.
     
     Parameters:
-    adjacency_matrix: numpy.ndarray of shape (n, n) containing node-node adjancencies.
-    root: Root node
+    adjacency_matrix: pandas.DataFrame containing node-node adjancencies.
+    root: Root node index
     flags: List of vertex flags. All vertices whose flag is initially set are ignored. After return the flags of all found vertices will be set.
     
-    Returns a list of all nodes reachable from root sorted by
+    Returns a list of all node indices reachable from root sorted by
     post-order traversal.
     """
     result = []
     flags[root] = True
     for vertex in range(adjacency_matrix.shape[0]):
-        if adjacency_matrix[root,vertex]:
+        if adjacency_matrix.iat[root, vertex]:
             if not flags[vertex]:
                 result += depth_first_search(adjacency_matrix, vertex, flags)
     result.append(root)
@@ -297,8 +377,8 @@ def component_is_closed(component, adjacency_matrix):
     edges pointing out of the component
     """
     for a in component:
-        for b in set(range(adjacency_matrix.shape[0])).difference(component):
-            if adjacency_matrix[a,b] > 0:
+        for b in set(adjacency_matrix.index).difference(component):
+            if adjacency_matrix.at[a,b] > 0:
                 return False
     return True
 
@@ -307,9 +387,9 @@ def strongly_connected_components(adjacency_matrix):
     """Finds all strongly connected components of a digraph.
     
     Parameters:
-    adjacency_matrix: numpy.ndarray of shape (n, n) containing node-node adjancencies.
+    adjacency_matrix: pandas.DataFrame containing node-node adjancencies.
     
-    Returns a list of strongly connected components, each of which is a list of vertices.
+    Returns a list of strongly connected components, each of which is a list of vertex labels.
     """
     nodes = range(adjacency_matrix.shape[0])
     flags = [False] * len(nodes)
@@ -321,9 +401,10 @@ def strongly_connected_components(adjacency_matrix):
     components = []
     for node in reversed(node_list):
         if not flags[node]:
-            components.append(depth_first_search(adjacency_matrix.T, node, flags))
+            components.append([adjacency_matrix.index[i] for i in depth_first_search(adjacency_matrix.T, node, flags)])
     return components
-    
+
+
 def gcd(a, b):
     while b != 0:
         b, a = a%b, b
