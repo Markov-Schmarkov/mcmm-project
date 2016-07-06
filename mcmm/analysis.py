@@ -290,7 +290,7 @@ class MarkovStateModel:
             Number of metastable sets
 
         Returns:
-        (n, 1) ndarray (vector) containing the assignments of each state i (index) to a metastable set (value).
+        (n,) ndarray (vector) containing the assignments of each state i (index) to a metastable set (value).
         """
         pcca_mat = self.pcca(num_sets)
         return np.array([np.argmax(pcca_mat[i, :]) for i in range(self._num_states)])
@@ -305,7 +305,7 @@ class MarkovStateModel:
             Number of metastable sets
 
         Returns:
-        List of (n, 1) ndarrays (vectors), which are the states belonging to the corresponding metastable set.
+        List of (n,) ndarrays (vectors), which are the states belonging to the corresponding metastable set.
         """
         pcca_mat = self.pcca(num_sets)
         sets = []

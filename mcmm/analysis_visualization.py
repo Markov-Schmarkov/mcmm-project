@@ -16,11 +16,11 @@ class AnalysisViz(object):
     def __init__(self, msm):
         self._msm = msm
         
-    def _format_square(ax):
-        ax.set_xlim(-2, 2)
-        ax.set_ylim(-2, 2)
-        ax.set_xticks([-2, -1, 0, 1, 2])
-        ax.set_yticks([-2, -1, 0, 1, 2])
+    def _format_square(self, ax, minX, maxX, minY, maxY):
+        ax.set_xlim(math.floor(minX), math.floor(maxX))
+        ax.set_ylim(math.floor(minY), math.floor(maxY))
+        ax.set_xticks([i for i in range(math.floor(minX), math.ceil(maxX)+1)])
+        ax.set_yticks([i for i in range(math.floor(minY), math.ceil(maxY)+1)])
         ax.set_xlabel(r"$x$ / a.u.")
         ax.set_ylabel(r"$y$ / a.u.")
         ax.set_aspect('equal')
@@ -90,5 +90,5 @@ class AnalysisViz(object):
                         connectionstyle="arc3,rad=%f" % curv,
                         ),
                     )
-        _format_square(ax)
+        self._format_square(ax, min(state_pos[:, 0]), max(state_pos[:, 0]), min(state_pos[:, 1]), max(state_pos[:, 1]))
         fig.tight_layout()
