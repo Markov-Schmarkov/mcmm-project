@@ -229,12 +229,15 @@ class MarkovStateModel:
         Returns:
         (n, n) pandas.DataFrame containing the probabilty currents for every pair of states.
         """
-        result = np.zeros(self.transition_matrix.shape)
+        result = pd.DataFrame(np.zeros(self.transition_matrix.shape),
+            index=self.transition_matrix.index, columns=self.transition_matrix.columns
+        )
         fwd_commitors = self.forward_committors(A, B)
         bwd_commitors = self.backward_commitors(A, B)
-        for (i,j), value in np.ndenumerate(self.transition_matrix):
-            if i != j:
-                result[i,j] = self.stationary_distribution[i] * bwd_commitors[i] * value * fwd_commitors[j]
+        for i in self.transition_matrix.index:
+            for j in self.transition_matrix.columns:
+                if i != j:
+                    result.at[i,j] = self.stationary_distribution.at[i] * bwd_commitors.at[i] * self.transition_matrix.at[i,j] * fwd_commitors.at[j]
         return result
 
     def effective_probability_current(self, A, B):
@@ -244,16 +247,16 @@ class MarkovStateModel:
         (n, n) pandas.DataFrame containing the effective probabilty currents for every pair of states.
         """
         current = self.probability_current(A, B)
-        result = pd.DataFrame(np.zeros(current.shape))
-        for i, row in current.iterrows():
-            for j in row:
+        result = pd.DataFrame(np.zeros(current.shape), index=current.index, columns=current.columns)
+        for i in current.index:
+            for j in current.columns:
                 result.at[i,j] = max(0, current.at[i,j]-current.at[j,i])
         return result
 
     def transition_rate(self, A, B):
         """Returns the transition rate from A to B"""
         current = self.probability_current(A, B)
-        num_trajs = np.sum(current[A,:])
+        num_trajs = current.loc[A,:].sum().sum()
         result = num_trajs / self.stationary_distribution.dot(self.backward_commitors(A,B))
         return result
 
