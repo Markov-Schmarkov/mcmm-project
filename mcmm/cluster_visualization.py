@@ -1,3 +1,6 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+__metaclass__ = type
+
 from . import clustering as cl
 import numpy as np
 from sklearn.datasets import make_classification

@@ -13,7 +13,6 @@ from scipy.spatial import distance
 from scipy.stats import rv_discrete
 from timeit import default_timer as timer
 from datetime import timedelta
-from . import cluster_visualization
 
 #----------------
 #K-Means clustering
