@@ -24,6 +24,53 @@ class AnalysisViz(object):
         ax.set_xlabel(r"$x$ / a.u.")
         ax.set_ylabel(r"$y$ / a.u.")
         ax.set_aspect('equal')
+        
+    def plot_state_probabilities(self, state_pos):
+        '''
+        Produces a 2D-plot of the cluster centers, colored according to their stationary probability.
+        Parameters:
+        
+            state_pos : (n, 2) ndarray. positions of states (cluster centers)
+        '''
+        fig, ax = plt.subplots(figsize=(6.5, 5))
+        im = ax.scatter(state_pos[:, 0], state_pos[:, 1], c=self._msm.stationary_distribution, s=200)
+        cbar = fig.colorbar(im, ax=ax)
+        cbar.set_label(r"$\pi(x,y)$", fontsize=20)
+        self._format_square(ax, min(state_pos[:, 0]), max(state_pos[:, 0]), min(state_pos[:, 1]), max(state_pos[:, 1]))
+    
+    def plot_eigenvectors(self, state_pos, num_eigenvectors):
+        '''
+        Produces a 2D-plot of the eigenvectors, colored according to their values.
+        Parameters:
+        
+            state_pos : (n, 2) ndarray. positions of states (cluster centers)
+            num_eigenvectors : number of eigenvectors to be plotted
+        '''
+        num_subplts_per_row = 7
+        num_rows = (num_eigenvectors // num_subplts_per_row) + 1
+        num_cols = min(num_subplts_per_row, num_eigenvectors)
+        rev = self._msm.right_eigenvectors(k=num_eigenvectors+1).apply(np.real)
+        fig, axes = plt.subplots(num_rows, num_cols, figsize=(17, 3*num_rows))
+        for i, ax in enumerate(axes.flat):
+            self._format_square(ax, min(state_pos[:, 0]), max(state_pos[:, 0]), min(state_pos[:, 1]), max(state_pos[:, 1]))
+            if i < num_eigenvectors:
+                ax.scatter(state_pos[:, 0], state_pos[:, 1], s=80, c=rev.iloc[:, i+1])
+            
+    def plot_metastable_set_assignments(self, state_pos, num_metastable_sets):
+        '''
+        Produces a 2D-plot of the metastable-set-assignments.
+        Parameters:
+        
+            state_pos : (n, 2) ndarray. positions of states (cluster centers)
+            num_metastable_sets : integer. Number of metastable sets of the Markov State Model,
+                PCCA should be performed with
+        '''
+        fig, ax = plt.subplots(figsize=(6.5, 5))
+        im = ax.scatter(state_pos[:, 0], state_pos[:, 1], c=self._msm.metastable_set_assignments(num_metastable_sets), s=200)
+        cbar = fig.colorbar(im, ax=ax)
+        cbar.set_ticks(np.arange(num_metastable_sets))
+        cbar.set_label(r"metastable state", fontsize=20)
+        self._format_square(ax, min(state_pos[:, 0]), max(state_pos[:, 0]), min(state_pos[:, 1]), max(state_pos[:, 1]))
 
     def plot_network(self, state_pos, num_metastable_sets):
         '''
@@ -32,7 +79,7 @@ class AnalysisViz(object):
         
             state_pos : (n, 2) ndarray. positions of states (cluster centers)
             num_metastable_sets : integer. Number of metastable sets of the Markov State Model,
-                we should perform PCCA with
+                PCCA should be performed with
         '''
             
         ####################
