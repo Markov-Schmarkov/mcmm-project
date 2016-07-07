@@ -11,6 +11,8 @@ import numpy as np
 import msmtools.analysis
 import pandas as pd
 
+import math
+
 class CommunicationClass:
     def __init__(self, states, closed):
         self.states = states
@@ -19,7 +21,7 @@ class CommunicationClass:
 
 class MarkovStateModel:
 
-    def __init__(self, transition_matrix):
+    def __init__(self, transition_matrix, lagtime=1):
         """Create new Markov State Model.
 
         Parameters:
@@ -33,6 +35,7 @@ class MarkovStateModel:
         if not (transition_matrix.columns == transition_matrix.index).all():
             raise InvalidValue('Transition matrix must have identical row and column labels')
 
+        self._lagtime = lagtime
         self._states = transition_matrix.index
         self._transition_matrix = transition_matrix
         self._backward_transition_matrix = None
@@ -47,6 +50,10 @@ class MarkovStateModel:
     @property
     def states(self):
         return list(self._states)
+
+    @property
+    def lagtime(self):
+        return self._lagtime
 
     @property
     def communication_classes(self):
@@ -179,6 +186,7 @@ class MarkovStateModel:
         eigenvalues, eigenvectors = zip(*(
             sorted(zip(eigenvalues, eigenvectors.T), key=lambda x: np.real(x[0]), reverse=True)
         ))
+        eigenvalues = pd.Series(eigenvalues)
         eigenvectors = pd.concat([
             pd.Series(x, index=matrix.index)
             for x in eigenvectors
@@ -206,6 +214,10 @@ class MarkovStateModel:
         if self._right_eigenvectors is None:
             self._eigenvalues, self._right_eigenvectors = self._right_eigen(self.transition_matrix)
         return (self._eigenvalues, self._right_eigenvectors)
+
+    @property
+    def eigenvalues(self):
+        return self.left_eigen[0]
             
     def _find_stationary_distribution(self):
         """Finds the stationary distribution of a given stochastic matrix.
@@ -219,6 +231,10 @@ class MarkovStateModel:
         v_real = v.apply(np.real)
         assert(np.allclose(v, v_real)) # result should be real
         return v_real/np.sum(v_real)
+
+    @property
+    def implied_timescales(self):
+        return self.eigenvalues.iloc[1:].apply(lambda x: - self.lagtime / math.log(abs(x)))
     
     def forward_committors(self, A, B):
         """Returns the vector of forward commitors from A to B
