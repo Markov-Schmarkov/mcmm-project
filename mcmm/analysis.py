@@ -45,6 +45,10 @@ class MarkovStateModel:
         self._communication_classes = None
 
     @property
+    def states(self):
+        return list(self._states)
+
+    @property
     def communication_classes(self):
         """The set of communication classes of the state space.
         
@@ -276,47 +280,45 @@ class MarkovStateModel:
             Number of metastable sets
 
         Returns:
-        clusters : (n, m) ndarray
-            Membership vectors. clusters[i, j] contains the membership probability of state i to metastable state j.
+        clusters : pandas.DataFrame
+            Membership vectors. clusters.loc[i, j] contains the membership probability of state i to metastable state j.
         """
         if not self.is_reversible:
             raise InvalidOperation('Can not perform PCCA on non-reversible markov chain.')
-        return msmtools.analysis.pcca(self.transition_matrix, num_sets)
+        if num_sets > self._num_states:
+            raise InvalidValue('Number of metastable sets exceeds number of states')
+
+        pcca = msmtools.analysis.pcca(self.transition_matrix, num_sets)
+        return pd.DataFrame(pcca, index=self._states)
     
     def metastable_set_assignments(self, num_sets):
         """Performs PCCA++ and returns assignment vector, i.e. a vector with num_states entries,
         that are the most probable metastable set for every corresponding state.
         
-        TODO: raise error, when num_sets is smaller than num_states.
-
         Arguments:
         num_sets: integer
             Number of metastable sets
 
-        Returns:
-        (n,) ndarray (vector) containing the assignments of each state i (index) to a metastable set (value).
+        Returns: pandas.Series
+            Series where the entry.loc[i] contains the metastable set of state i.
         """
         pcca_mat = self.pcca(num_sets)
-        return np.array([np.argmax(pcca_mat[i, :]) for i in range(self._num_states)])
+        return pd.Series([pcca_mat.loc[i, :] for i in self._states], index=self._states)
 
     def metastable_sets(self, num_sets):
         """Performs PCCA++ and returns the metastable sets.
         
-        TODO: raise error, when num_sets is smaller than num_states.
-
         Arguments:
         num_sets: integer
             Number of metastable sets
 
-        Returns:
-        List of (n,) ndarrays (vectors), which are the states belonging to the corresponding metastable set.
+        Returns: [[state]]
+            List of metastable sets, each of which is a list of states.
         """
         pcca_mat = self.pcca(num_sets)
-        sets = []
-        for i in range(num_sets):
-            sets.append([])
-        for i in range(self._num_states):
-            sets[np.argmax(pcca_mat[i, :])].append(i)
+        sets = [[] for i in range(num_sets)]
+        for s in self._states:
+            sets[pcca_mat.loc[s, :].argmax()].append(s)
         return sets
     
     def restriction(self, communication_class):
