@@ -16,11 +16,11 @@ class AnalysisViz(object):
     def __init__(self, msm):
         self._msm = msm
         
-    def _format_square(ax):
-        ax.set_xlim(-2, 2)
-        ax.set_ylim(-2, 2)
-        ax.set_xticks([-2, -1, 0, 1, 2])
-        ax.set_yticks([-2, -1, 0, 1, 2])
+    def _format_square(self, ax, minX, maxX, minY, maxY):
+        ax.set_xlim(math.floor(minX), math.floor(maxX))
+        ax.set_ylim(math.floor(minY), math.floor(maxY))
+        ax.set_xticks([i for i in range(math.floor(minX), math.ceil(maxX)+1)])
+        ax.set_yticks([i for i in range(math.floor(minY), math.ceil(maxY)+1)])
         ax.set_xlabel(r"$x$ / a.u.")
         ax.set_ylabel(r"$y$ / a.u.")
         ax.set_aspect('equal')
@@ -40,11 +40,29 @@ class AnalysisViz(object):
         ####################
         
         data_dim = 2
-        pcca_mat = self._msm.pcca(num_metastable_sets)
+        #pcca_mat = self._msm.pcca(num_metastable_sets)
         barycenters = np.zeros((num_metastable_sets, data_dim))
+        
+        # Calculate metastable sets
         sets = self._msm.metastable_sets(num_metastable_sets)
+        
+        # Delete sets, that had no state assigned to them (i.e. that are empty)
+        num_empty_sets = 0
+        for i in range(num_metastable_sets):
+            if not sets[i-num_empty_sets]:
+                sets.pop(i)
+                num_empty_sets += 1
+        if num_empty_sets is 1:
+            print('There was 1 empty metastable set produced by PCCA!')
+        elif num_empty_sets is not 0:
+            print('There were', num_empty_sets, 'empty metastable sets produced by PCCA!')
+        num_metastable_sets -= num_empty_sets
+        
+        # Calculate barycenters 
         for i in range(num_metastable_sets): #loop over metastable sets
             barycenters[i, :] = [np.mean(state_pos[sets[i], j]) for j in range(data_dim)]
+        
+        # Calculate sum of probabilities of stationary probabilities of all states of the sets
         pi = np.array([self._msm.stationary_distribution[s].sum() for s in sets])
         
         
@@ -90,5 +108,5 @@ class AnalysisViz(object):
                         connectionstyle="arc3,rad=%f" % curv,
                         ),
                     )
-        _format_square(ax)
+        self._format_square(ax, min(state_pos[:, 0]), max(state_pos[:, 0]), min(state_pos[:, 1]), max(state_pos[:, 1]))
         fig.tight_layout()

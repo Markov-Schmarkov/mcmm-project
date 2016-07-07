@@ -223,15 +223,38 @@ def test_transient_state():
     assert_false(msm.is_aperiodic)
 # End periodicity tests
 
+
+def random_reversible_matrix(size):
+    traj = np.random.randint(0, size, 100)
+    return est.Estimator(traj).reversible_transition_matrix
+
 def test_pcca():
     num_states = 10
     num_clusters = 4
-    traj = np.random.randint(0, num_states, 100)
-    transition_matrix = est.Estimator(traj).reversible_transition_matrix
-    msm = ana.MarkovStateModel(transition_matrix)
+    msm = ana.MarkovStateModel(random_reversible_matrix(num_states))
     result = msm.pcca(num_clusters)
     assert_equals(result.shape, (num_states, num_clusters))
+    assert_true((result.index == range(num_states)).all())
+    assert_true((result.columns == range(num_clusters)).all())
     assert_true(np.all(result <= 1) and np.all(result >= 0))
+
+
+def test_metastable_sets():
+    num_states = 10
+    num_clusters = 4
+    msm = ana.MarkovStateModel(random_reversible_matrix(num_states))
+    sets = msm.metastable_sets(num_clusters)
+    assert_equals(len(sets), num_clusters)
+    assert_equals(sum(len(x) for x in sets), num_states)
+    assert_equals(set().union(*sets), set(range(num_states)))
+
+
+def test_metastable_set_assignments():
+    num_states = 10
+    num_clusters = 4
+    msm = ana.MarkovStateModel(random_reversible_matrix(num_states))
+    assignments = msm.metastable_set_assignments(num_clusters)
+    assert_true((assignments.index == msm.states).all())
 
 
 def test_transition_rate():
@@ -261,4 +284,3 @@ def test_restriction():
         [0.1, 0.7, 0.2],
         [0.6, 0.1, 0.3]
     ], index=['b', 'c', 'd'], columns=['b', 'c', 'd']))
-
