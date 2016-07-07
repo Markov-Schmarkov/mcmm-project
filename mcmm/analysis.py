@@ -303,7 +303,7 @@ class MarkovStateModel:
             Series where the entry.loc[i] contains the metastable set of state i.
         """
         pcca_mat = self.pcca(num_sets)
-        return pd.Series([pcca_mat.loc[i, :] for i in self._states], index=self._states)
+        return pd.Series([pcca_mat.loc[i, :].argmax() for i in self._states], index=self._states)
 
     def metastable_sets(self, num_sets):
         """Performs PCCA++ and returns the metastable sets.
