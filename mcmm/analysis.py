@@ -30,6 +30,10 @@ class MarkovStateModel:
             raise InvalidValue('Transition matrix must be stochastic')
         if not transition_matrix.shape[0] == transition_matrix.shape[1]:
             raise InvalidValue('Transition matrix must be quadratic')
+        if not (transition_matrix.columns == transition_matrix.index).all():
+            raise InvalidValue('Transition matrix must have identical row and column labels')
+
+        self._states = transition_matrix.index
         self._transition_matrix = transition_matrix
         self._backward_transition_matrix = None
         self._stationary_distribution = None
@@ -230,12 +234,12 @@ class MarkovStateModel:
         (n, n) pandas.DataFrame containing the probabilty currents for every pair of states.
         """
         result = pd.DataFrame(np.zeros(self.transition_matrix.shape),
-            index=self.transition_matrix.index, columns=self.transition_matrix.columns
+            index=self._states, columns=self._states
         )
         fwd_commitors = self.forward_committors(A, B)
         bwd_commitors = self.backward_commitors(A, B)
-        for i in self.transition_matrix.index:
-            for j in self.transition_matrix.columns:
+        for i in self._states:
+            for j in self._states:
                 if i != j:
                     result.at[i,j] = self.stationary_distribution.at[i] * bwd_commitors.at[i] * self.transition_matrix.at[i,j] * fwd_commitors.at[j]
         return result
@@ -331,12 +335,12 @@ class MarkovStateModel:
     def _commitors(self, A, B, T):
         """Returns the vector of forward commitors from A to B given propagator T"""
         n = len(T)
-        C = list(set(range(n)) - set().union(A, B))
+        C = list(set(self._states) - set().union(A, B))
         if C:
             M = T - np.identity(n)
-            d = np.sum(M.iloc[C,B], axis=1)
-            solution = np.linalg.solve(M.iloc[C, C], -d)
-        result = pd.Series(np.empty(n), index=self.transition_matrix.index)
+            d = M.loc[C,B].sum(axis=1)
+            solution = np.linalg.solve(M.loc[C, C], -d)
+        result = pd.Series(np.empty(n), index=self._states)
         c = 0
         for i in result.index:
             if i in A:
