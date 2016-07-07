@@ -51,12 +51,17 @@ class AnalysisViz(object):
         num_rows = (num_eigenvectors // num_subplts_per_row) + 1
         num_cols = min(num_subplts_per_row, num_eigenvectors)
         rev = eigenvectors.apply(np.real)
-        fig, axes = plt.subplots(num_rows, num_cols, figsize=(17, 3*num_rows))
-        for i, ax in enumerate(axes.flat):
-            self._format_square(ax, min(state_pos[:, 0]), max(state_pos[:, 0]), min(state_pos[:, 1]), max(state_pos[:, 1]))
-            if i < num_eigenvectors:
-                ax.scatter(state_pos[:, 0], state_pos[:, 1], s=80, c=rev.iloc[:, i+1])
-                
+        if(num_eigenvectors > 1):
+            fig, axes = plt.subplots(num_rows, num_cols, figsize=(17, 3*num_rows))
+            for i, ax in enumerate(axes.flat):
+                self._format_square(ax, min(state_pos[:, 0]), max(state_pos[:, 0]), min(state_pos[:, 1]), max(state_pos[:, 1]))
+                if i < num_eigenvectors:
+                    ax.scatter(state_pos[:, 0], state_pos[:, 1], s=80, c=rev.iloc[:, i+1])
+        else:
+            fig, axes = plt.subplots(num_rows, num_cols, figsize=(17, 3*num_rows))
+            self._format_square(axes, min(state_pos[:, 0]), max(state_pos[:, 0]), min(state_pos[:, 1]), max(state_pos[:, 1]))
+            plt.scatter(state_pos[:, 0], state_pos[:, 1], s=80, c=rev.iloc[:, 1])
+            
     def plot_left_eigenvectors(self, state_pos, num_eigenvectors):
         '''
         Produces a 2D-plot of the left eigenvectors, colored according to their values.
