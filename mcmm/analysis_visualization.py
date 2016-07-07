@@ -38,23 +38,44 @@ class AnalysisViz(object):
         cbar.set_label(r"$\pi(x,y)$", fontsize=20)
         self._format_square(ax, min(state_pos[:, 0]), max(state_pos[:, 0]), min(state_pos[:, 1]), max(state_pos[:, 1]))
     
-    def plot_eigenvectors(self, state_pos, num_eigenvectors):
+    def plot_eigenvectors(self, state_pos, eigenvectors):
         '''
         Produces a 2D-plot of the eigenvectors, colored according to their values.
         Parameters:
         
             state_pos : (n, 2) ndarray. positions of states (cluster centers)
-            num_eigenvectors : number of eigenvectors to be plotted
+            eigenvectors : pandas.DataFrame (n, m) eigenvectors to be plotted
         '''
+        num_eigenvectors = eigenvectors.shape[1]-1
         num_subplts_per_row = 7
         num_rows = (num_eigenvectors // num_subplts_per_row) + 1
         num_cols = min(num_subplts_per_row, num_eigenvectors)
-        rev = self._msm.right_eigenvectors(k=num_eigenvectors+1).apply(np.real)
+        rev = eigenvectors.apply(np.real)
         fig, axes = plt.subplots(num_rows, num_cols, figsize=(17, 3*num_rows))
         for i, ax in enumerate(axes.flat):
             self._format_square(ax, min(state_pos[:, 0]), max(state_pos[:, 0]), min(state_pos[:, 1]), max(state_pos[:, 1]))
             if i < num_eigenvectors:
                 ax.scatter(state_pos[:, 0], state_pos[:, 1], s=80, c=rev.iloc[:, i+1])
+                
+    def plot_left_eigenvectors(self, state_pos, num_eigenvectors):
+        '''
+        Produces a 2D-plot of the left eigenvectors, colored according to their values.
+        Parameters:
+        
+            state_pos : (n, 2) ndarray. positions of states (cluster centers)
+            num_eigenvectors : number of left eigenvectors to be plotted
+        '''
+        self.plot_eigenvectors(state_pos, self._msm.left_eigenvectors(k=num_eigenvectors+1))
+        
+    def plot_right_eigenvectors(self, state_pos, num_eigenvectors):
+        '''
+        Produces a 2D-plot of the left eigenvectors, colored according to their values.
+        Parameters:
+        
+            state_pos : (n, 2) ndarray. positions of states (cluster centers)
+            num_eigenvectors : number of right eigenvectors to be plotted
+        '''
+        self.plot_eigenvectors(state_pos, self._msm.right_eigenvectors(k=num_eigenvectors+1))
             
     def plot_metastable_set_assignments(self, state_pos, num_metastable_sets):
         '''
