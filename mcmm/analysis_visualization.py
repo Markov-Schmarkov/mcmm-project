@@ -40,11 +40,29 @@ class AnalysisViz(object):
         ####################
         
         data_dim = 2
-        pcca_mat = self._msm.pcca(num_metastable_sets)
+        #pcca_mat = self._msm.pcca(num_metastable_sets)
         barycenters = np.zeros((num_metastable_sets, data_dim))
+        
+        # Calculate metastable sets
         sets = self._msm.metastable_sets(num_metastable_sets)
+        
+        # Delete sets, that had no state assigned to them (i.e. that are empty)
+        num_empty_sets = 0
+        for i in range(num_metastable_sets):
+            if not sets[i-num_empty_sets]:
+                sets.pop(i)
+                num_empty_sets += 1
+        if num_empty_sets is 1:
+            print('There was 1 empty metastable set produced by PCCA!')
+        elif num_empty_sets is not 0:
+            print('There were', num_empty_sets, 'empty metastable sets produced by PCCA!')
+        num_metastable_sets -= num_empty_sets
+        
+        # Calculate barycenters 
         for i in range(num_metastable_sets): #loop over metastable sets
             barycenters[i, :] = [np.mean(state_pos[sets[i], j]) for j in range(data_dim)]
+        
+        # Calculate sum of probabilities of stationary probabilities of all states of the sets
         pi = np.array([self._msm.stationary_distribution[s].sum() for s in sets])
         
         

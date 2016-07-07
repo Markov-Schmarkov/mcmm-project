@@ -11,6 +11,8 @@ import numpy as np
 import msmtools.analysis
 import pandas as pd
 
+import math
+
 class CommunicationClass:
     def __init__(self, states, closed):
         self.states = states
@@ -19,7 +21,7 @@ class CommunicationClass:
 
 class MarkovStateModel:
 
-    def __init__(self, transition_matrix):
+    def __init__(self, transition_matrix, lagtime=1):
         """Create new Markov State Model.
 
         Parameters:
@@ -33,6 +35,7 @@ class MarkovStateModel:
         if not (transition_matrix.columns == transition_matrix.index).all():
             raise InvalidValue('Transition matrix must have identical row and column labels')
 
+        self._lagtime = lagtime
         self._states = transition_matrix.index
         self._transition_matrix = transition_matrix
         self._backward_transition_matrix = None
@@ -43,6 +46,14 @@ class MarkovStateModel:
         self._left_eigenvectors = None
         self._right_eigenvectors = None
         self._communication_classes = None
+
+    @property
+    def states(self):
+        return list(self._states)
+
+    @property
+    def lagtime(self):
+        return self._lagtime
 
     @property
     def communication_classes(self):
@@ -175,6 +186,7 @@ class MarkovStateModel:
         eigenvalues, eigenvectors = zip(*(
             sorted(zip(eigenvalues, eigenvectors.T), key=lambda x: np.real(x[0]), reverse=True)
         ))
+        eigenvalues = pd.Series(eigenvalues)
         eigenvectors = pd.concat([
             pd.Series(x, index=matrix.index)
             for x in eigenvectors
@@ -202,6 +214,10 @@ class MarkovStateModel:
         if self._right_eigenvectors is None:
             self._eigenvalues, self._right_eigenvectors = self._right_eigen(self.transition_matrix)
         return (self._eigenvalues, self._right_eigenvectors)
+
+    @property
+    def eigenvalues(self):
+        return self.left_eigen[0]
             
     def _find_stationary_distribution(self):
         """Finds the stationary distribution of a given stochastic matrix.
@@ -215,6 +231,10 @@ class MarkovStateModel:
         v_real = v.apply(np.real)
         assert(np.allclose(v, v_real)) # result should be real
         return v_real/np.sum(v_real)
+
+    @property
+    def implied_timescales(self):
+        return self.eigenvalues.iloc[1:].apply(lambda x: - self.lagtime / math.log(abs(x)))
     
     def forward_committors(self, A, B):
         """Returns the vector of forward commitors from A to B
@@ -276,47 +296,45 @@ class MarkovStateModel:
             Number of metastable sets
 
         Returns:
-        clusters : (n, m) ndarray
-            Membership vectors. clusters[i, j] contains the membership probability of state i to metastable state j.
+        clusters : pandas.DataFrame
+            Membership vectors. clusters.loc[i, j] contains the membership probability of state i to metastable state j.
         """
         if not self.is_reversible:
             raise InvalidOperation('Can not perform PCCA on non-reversible markov chain.')
-        return msmtools.analysis.pcca(self.transition_matrix, num_sets)
+        if num_sets > self._num_states:
+            raise InvalidValue('Number of metastable sets exceeds number of states')
+
+        pcca = msmtools.analysis.pcca(self.transition_matrix, num_sets)
+        return pd.DataFrame(pcca, index=self._states)
     
     def metastable_set_assignments(self, num_sets):
         """Performs PCCA++ and returns assignment vector, i.e. a vector with num_states entries,
         that are the most probable metastable set for every corresponding state.
         
-        TODO: raise error, when num_sets is smaller than num_states.
-
         Arguments:
         num_sets: integer
             Number of metastable sets
 
-        Returns:
-        (n,) ndarray (vector) containing the assignments of each state i (index) to a metastable set (value).
+        Returns: pandas.Series
+            Series where the entry.loc[i] contains the metastable set of state i.
         """
         pcca_mat = self.pcca(num_sets)
-        return np.array([np.argmax(pcca_mat[i, :]) for i in range(self._num_states)])
+        return pd.Series([pcca_mat.loc[i, :].argmax() for i in self._states], index=self._states)
 
     def metastable_sets(self, num_sets):
         """Performs PCCA++ and returns the metastable sets.
         
-        TODO: raise error, when num_sets is smaller than num_states.
-
         Arguments:
         num_sets: integer
             Number of metastable sets
 
-        Returns:
-        List of (n,) ndarrays (vectors), which are the states belonging to the corresponding metastable set.
+        Returns: [[state]]
+            List of metastable sets, each of which is a list of states.
         """
         pcca_mat = self.pcca(num_sets)
-        sets = []
-        for i in range(num_sets):
-            sets.append([])
-        for i in range(self._num_states):
-            sets[np.argmax(pcca_mat[i, :])].append(i)
+        sets = [[] for i in range(num_sets)]
+        for s in self._states:
+            sets[pcca_mat.loc[s, :].argmax()].append(s)
         return sets
     
     def restriction(self, communication_class):
