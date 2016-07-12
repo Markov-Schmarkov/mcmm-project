@@ -147,7 +147,7 @@ class KMeans(object):
             print('Finished after '+str(elapsed_time))
             print('max within-cluster distance to center: %f'%np.max(self._cluster_dist))
             print('mean within-cluster distance to center: %f' %np.mean(self._cluster_dist))
-            print('within cluster sum of squared errors: %f' % np.sum(np.square(self._cluster_dist)))
+            print('sum of within cluster squared errors: %f' % np.sum(np.square(self._cluster_dist)))
 
 
     def transform(self,data):
