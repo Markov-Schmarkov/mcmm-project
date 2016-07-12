@@ -45,7 +45,6 @@ class DBSCAN(object):
             else:
                 visited[i] = True
                 neighbor_indices = get_region(self._data,observation,self._eps,self._metric)
-                neighbors = self._data[neighbor_indices]
                 if len(neighbor_indices) < self._minPts:
                     # mark as noise
                     cluster_labels[i] = 'noise'
@@ -55,7 +54,7 @@ class DBSCAN(object):
                     #-------------
                     #expand cluster subalgorithm
                     #-------------
-                    cluster_labels=expand_cluster(self._data,i,neighbor_indices,neighbors,cluster_labels,cluster_index,self._eps,self._minPts,visited,self._metric)
+                    cluster_labels,visited=expand_cluster(self._data,i,neighbor_indices,cluster_labels,cluster_index,self._eps,self._minPts,visited,self._metric)
 
         self.cluster_labels = cluster_labels
 
@@ -79,24 +78,40 @@ def get_region(data,p,eps,metric):
 
     return indices
 
-def expand_cluster(data,i,neighbor_indices,neighbors,cluster_labels,active_cluster_index,eps,minPts,visited,metric):
+def expand_cluster(data,i,neighbor_indices,cluster_labels,active_cluster_index,eps,minPts,visited,metric):
     '''
 
     '''
+    #label active point
     cluster_labels[i] = active_cluster_index
-    while not np.all(visited[neighbor_indices]):
+    neighbors = data[neighbor_indices]
 
-        for k,p in enumerate(neighbors):
+    #walk through unvisited points in neighborhood
+    while True:
+        counter = 0
 
+        #expand neighborhood until it does not grow anymore
+        while True:
+
+            k=neighbor_indices[counter]
             if not visited[k]:
                 visited[k] = True
-                neighbor_indices2 = get_region(data,p,eps,metric)
+                neighbor = data[k]
+                neighbor_indices2 = get_region(data,neighbor,eps,metric)
                 if len(neighbor_indices2) >= minPts:
-                    neighbor_indices = np.union1d(neighbor_indices,neighbor_indices2)
+                    neighbor_indices = list(set(neighbor_indices)|set(neighbor_indices2))
             if cluster_labels[k] is None:
                 cluster_labels[k] = active_cluster_index
+            counter = counter + 1
+            #break condition inner loop: counter bigger than nbhd size
+            if counter>=len(neighbor_indices):
+                break
 
-    return cluster_labels
+        #break condition outer loop: all points visited
+        if np.all(visited[neighbor_indices]):
+            break
+
+    return cluster_labels,visited
 
 
 
