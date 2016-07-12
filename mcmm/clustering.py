@@ -2,9 +2,6 @@ r"""
 This module should handle the discretization by means of a kmeans or regspace clustering.
 """
 
-#TODO exception handling
-#TODO forgy initialization throws invalid cluster centers for input data containing identical points
-
 from __future__ import absolute_import, division, print_function, unicode_literals
 __metaclass__ = type
 from random import sample
@@ -93,10 +90,12 @@ class KMeans(object):
 
 
     @jit
-    def fit(self):
+    def fit(self,k=None,verbose=None):
         '''
         Runs the clustering iteration on the data it was given when initialized. If the object is not fitted,
         accessing .cluster_labels, .cluster_centers and .cluster_dist will also lead to a call of .fit().
+
+        You can specify k and verbose parameters ether in the .fit method or when initializing the KMeans instance.s
 
         Cluster centers,cluster labels and distances to associated center for the given data will
         be stored in the objects properties. An initial list of data will return labels and
@@ -106,6 +105,10 @@ class KMeans(object):
         always has a random component due to its cluster initialization. Just accessing the properties
         .cluster_labels, .cluster_centers and .cluster_dist will however NOT change the stored properties.
         '''
+        if k is not None:
+            self._k = k
+        if verbose is not None:
+            self._verbose = verbose
         if self._verbose:
             start_time = timer()
         if self._data_type_list is None:
@@ -115,20 +118,20 @@ class KMeans(object):
         cluster_centers = initialize_centers(self._data, self._k, self._method)
 
         counter = 0
+        break_cond = False # flags the termination by break condition
 
         while counter < self._max_iter:
             cluster_labels, cluster_dist = get_cluster_info(self._data, cluster_centers, metric=self._metric)
             new_cluster_centers = set_new_cluster_centers(self._data, cluster_labels, self._k)
             #break condition
             if np.allclose(cluster_centers, new_cluster_centers, self._atol, self._rtol):
-                print('terminated by break condition.')
+                break_cond = True
                 cluster_centers = new_cluster_centers
                 break
             cluster_centers = new_cluster_centers
             counter = counter+1
 
         cluster_labels, cluster_dist = get_cluster_info(self._data, cluster_centers, metric=self._metric)
-        print('%s iterations until termination.'%str(counter))
         self._cluster_centers = cluster_centers
         #cutting of labels according to given list
         if self._data_type_list:
@@ -139,11 +142,15 @@ class KMeans(object):
 
         self._fitted = True
         if self._verbose:
+            if break_cond:
+                print('terminated by break condition')
+            print('%s iterations until termination.' % str(counter))
             elapsed_time = timer() - start_time
             elapsed_time = timedelta(seconds=elapsed_time)
             print('Finished after '+str(elapsed_time))
             print('max within-cluster distance to center: %f'%np.max(self._cluster_dist))
-            print('mean within-cluster distance to center %f' %np.mean(self._cluster_dist))
+            print('mean within-cluster distance to center: %f' %np.mean(self._cluster_dist))
+            print('sum of within cluster squared errors: %f' % np.sum(np.square(self._cluster_dist)))
 
 
     def transform(self,data):
@@ -170,6 +177,8 @@ class KMeans(object):
 
         self._fitted = True
         return cluster_labels, cluster_dist
+
+
 
 #-------------------
 #Regspace clustering
@@ -280,7 +289,8 @@ class Regspace(object):
             print('Finished after '+str(elapsed_time))
             print('%i cluster centers detected'%len(self._cluster_centers)+'\n')
             print('max within-cluster distance to center: %f'%np.max(self._cluster_dist))
-            print('mean within-cluster distance to center %f' %np.mean(self._cluster_dist))
+            print('mean within-cluster distance to center: %f' %np.mean(self._cluster_dist))
+            print('within cluster sum of squared errors: %f' % np.sum(np.square(self._cluster_dist)))
 
     def transform(self,data):
         raise NotImplementedError

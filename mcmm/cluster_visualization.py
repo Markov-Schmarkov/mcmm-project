@@ -17,8 +17,6 @@ class ClusterViz(object):
 
     def __init__(self,cluster_object):
         self._cluster_object = cluster_object
-        if not self._cluster_object.fitted:
-            cluster_object.fit()
 
     def scatter(self,feature_indices=None,mark_centers = True,color_clusters=False,sample_rate=20):
         '''
@@ -34,7 +32,12 @@ class ClusterViz(object):
             color_clusters:
             sample_rate: int. Steps in which the underlying data is sampled, i.e. "20" corresponds to plotting of every
             20th observation from the data
+
+        NOTE: if the clustering instance is not fitted, ClusterViz.scatter will fit the object to its passed data
         '''
+
+        if not self._cluster_object.fitted:
+            self._cluster_object.fit()
 
         color = 'grey'
         if feature_indices is None:
@@ -75,6 +78,37 @@ class ClusterViz(object):
 
         else:
             raise ValueError('Not able to plot with given feature_indices')
+        plt.show()
+
+    def elbow(self,n_clusters):
+        '''
+        Implemetation of the elbow-rule plot (within cluster SSE vs. number of clusters), which is especially useful
+        for KMeans fitting evaluation for shorter fitting times and/or smaller k
+        Args:
+            n_clusters: list of integers specifying the number of clusters
+
+        NOTE: the used cluster instance has to support the parameter 'k' in its .fit method. Using KMeans will work,
+        using for example Regspace will not for obvious reasons.
+        '''
+
+        SSE_list = []
+        for k in n_clusters:
+            try:
+                self._cluster_object.fit(k,verbose=False)
+            except:
+                ValueError('clustering instance must support number of cluster centers as parameter')
+            if type(self._cluster_object.cluster_dist) is list:
+                cluster_dist = np.concatenate(self._cluster_object.cluster_dist,axis=0)
+            else:
+                cluster_dist = self._cluster_object.cluster_dist
+            SSE = np.sum(np.square(cluster_dist))
+            SSE_list.append(SSE)
+
+        fig = plt.figure()
+        plt.plot(n_clusters,SSE_list)
+        plt.suptitle('within-cluster SSE vs. k')
+        plt.xlabel('$k$')
+        plt.ylabel('$SSE$')
         plt.show()
 
 #-------------------------------

@@ -1,8 +1,10 @@
-from mcmm import analysis as ana, estimation as est
+from mcmm import analysis as ana, estimation as est, clustering as cl
 import numpy as np
 import pandas as pd
+import math
 import random
 import unittest
+import matplotlib.pyplot as plt
 from nose.tools import assert_true, assert_false, assert_equals, assert_raises
 import pandas.util.testing as pdt
 
@@ -284,3 +286,46 @@ def test_restriction():
         [0.1, 0.7, 0.2],
         [0.6, 0.1, 0.3]
     ], index=['b', 'c', 'd'], columns=['b', 'c', 'd']))
+
+
+def test_pcca_1():
+    """
+    Check Pcca with 4 states on 3 accumulation points in the data
+    We data in R^1 that accumulates at three points 0, 1, 2
+    Then we apply pcca with 4 pcca_states and check if it works as expected
+    """
+    n = 1000 #number of data points
+    kk = 3 #number of points where data accumulates
+    k = 10 #number of cluster_centers
+    factor = 0.1 #how much is the data perturbed
+    data = np.zeros((n,1))
+    for i in range(0,n):
+        data[i] = i % kk + factor * np.random.rand() * math.pow(-1,int(2*np.random.rand()))
+    #plt.scatter(data[:,0],np.zeros((n,1)))
+    
+    clustering = cl.KMeans(data,k)
+    cluster_centers = clustering.cluster_centers
+    cluster_labels = clustering.cluster_labels
+    
+    #plt.scatter(cluster_centers[:],np.zeros((k,1)),c='r')
+    
+    estimator = est.Estimator(cluster_labels, 1, 1)
+    matrix = estimator.reversible_transition_matrix
+    msm = ana.MarkovStateModel(matrix)
+    
+    n_pcca_states = 4;
+    #fig, ax = plt.subplots(figsize=(6.5, 5))
+    pcca_labels = msm.metastable_set_assignments(n_pcca_states)
+    #im = ax.scatter(cluster_centers[:, 0], np.zeros((k,1)), c=pcca_labels, s=200)
+    #cbar = fig.colorbar(im, ax=ax)
+    error = 0;
+    for j in range(0,kk):
+        for i in range(0,k):
+            if (round(cluster_centers[i,0]) == j):
+                test = i
+        for i in range(0,k):
+            if (np.abs(cluster_centers[i,0] - cluster_centers[test,0]) < 2*factor):
+                if (not pcca_labels[i] == pcca_labels[test]):
+                    error = 1
+    print(error)
+    assert_true(error == 0)
