@@ -97,11 +97,16 @@ class ClusterViz(object):
                 self._cluster_object.fit(k,verbose=False)
             except:
                 ValueError('clustering instance must support number of cluster centers as parameter')
-            SSE = np.sum(np.square(self._cluster_object.cluster_dist))
+            if type(self._cluster_object.cluster_dist) is list:
+                cluster_dist = np.concatenate(self._cluster_object.cluster_dist,axis=0)
+            else:
+                cluster_dist = self._cluster_object.cluster_dist
+            SSE = np.sum(np.square(cluster_dist))
             SSE_list.append(SSE)
 
         fig = plt.figure()
         plt.plot(n_clusters,SSE_list)
+        plt.suptitle('within-cluster SSE vs. k')
         plt.xlabel('$k$')
         plt.ylabel('$SSE$')
         plt.show()
