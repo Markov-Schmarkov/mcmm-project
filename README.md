@@ -31,5 +31,7 @@ Call
 from project directory. Alternatively, call
 ```
 pip install git+https://github.com/Markov-Schmarkov/mcmm-project
-``` to install from github.
+``` 
+to install from github.
+
 ### Team
