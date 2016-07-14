@@ -9,15 +9,15 @@ class DBSCAN(object):
 
     def __init__(self,data,eps,minPts,metric='euclidean',verbose=True):
         '''
-
+        Classic density based spatial clustering with noise classification.
         Args:
-            data:
-            eps:
-            minPts:
-
-        Returns:
-
+            data: (n,d)-shaped two-dimensional ndarray
+            eps: epsilon neighborhood parameter
+            minPts: minimal number of points in each neighborhood
         '''
+
+        if type(data) is list:
+            raise NotImplementedError('DBSCAN is not list compatible yet')
 
         self._data = data
         self._eps = eps
@@ -37,6 +37,9 @@ class DBSCAN(object):
         self._cluster_labels = value
 
     def fit(self):
+        '''
+        classifies the data with DBSCAN algorithm
+        '''
 
         if self._verbose:
             start_time = timer()
