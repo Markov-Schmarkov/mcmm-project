@@ -1,3 +1,6 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+__metaclass__ = type
+
 from mcmm import clustering as cl
 import matplotlib.pyplot as plt
 import numpy as np

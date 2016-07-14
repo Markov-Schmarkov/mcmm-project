@@ -1,13 +1,14 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 __metaclass__ = type
 
-from . import clustering as cl
 import numpy as np
-from sklearn.datasets import make_classification
 from sklearn.datasets.samples_generator import make_blobs
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from sklearn.datasets import make_circles
 
+from mcmm import clustering as cl
+from mcmm import DBSCAN
 
 class ClusterViz(object):
     '''
@@ -161,3 +162,23 @@ def kmeans_blobs_3d(n_samples,n_clusters,k,method='kmeans++',std=1):
     ax.scatter(data[:, 0], data[:, 1],data[:,2],c=cluster_labels)
     ax.scatter(cluster_centers[:, 0], cluster_centers[:, 1],cluster_centers[:,2], c='r', s=150,depthshade=False)
     plt.show()
+
+def DBSCAN_cirles(n_samples=10000,factor=.4,noise=.1,eps=.1,minPts=30):
+    '''
+    Plots classic example for DBSCAN clustering on datasets consisting of two circular clusters
+    Args:
+        n_samples: number of total observations
+        factor: scaling between inner and outer circle, see sklearn.datasets.make_circles doc
+        noise: standard deviation of noise, see sklearn.datasets.make_circles doc
+        eps: DBSCAN epsilon parameter
+        minPts: DBSCAN minPts parameter
+    '''
+    circle = make_circles(n_samples=n_samples, factor=factor, noise=noise)
+    circle = circle[0]
+    circlescan = DBSCAN.DBSCAN(circle,eps,minPts)
+    #reassign noise for plotting
+    labels = circlescan.cluster_labels
+    for p, i in enumerate(labels):
+        if i == 'noise':
+            labels[p] = circlescan._n_clusters + 1
+    plt.scatter(circle[:, 0], circle[:, 1], c=circlescan.cluster_labels)

@@ -2,26 +2,30 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 __metaclass__ = type
 import numpy as np
 from scipy.spatial import distance
+from timeit import default_timer as timer
+from datetime import timedelta
 
 class DBSCAN(object):
 
-    def __init__(self,data,eps,minPts,metric='euclidean'):
+    def __init__(self,data,eps,minPts,metric='euclidean',verbose=True):
         '''
-
+        Classic density based spatial clustering with noise classification.
         Args:
-            data:
-            eps:
-            minPts:
-
-        Returns:
-
+            data: (n,d)-shaped two-dimensional ndarray
+            eps: epsilon neighborhood parameter
+            minPts: minimal number of points in each neighborhood
         '''
+
+        if type(data) is list:
+            raise NotImplementedError('DBSCAN is not list compatible yet')
 
         self._data = data
         self._eps = eps
         self._minPts = minPts
         self._cluster_labels = None
         self._metric = metric
+        self._n_clusters = None
+        self._verbose = verbose
 
     @property
     def cluster_labels(self):
@@ -33,11 +37,19 @@ class DBSCAN(object):
         self._cluster_labels = value
 
     def fit(self):
+        '''
+        classifies the data with DBSCAN algorithm
+        '''
+
+        if self._verbose:
+            start_time = timer()
+
         # initialize variables
         [n_samples,dim] = self._data.shape
         visited = np.zeros(n_samples,dtype=bool)
         cluster_labels = [None]*n_samples
         cluster_index = 0
+        noise_counter = 0
 
         for i,observation in enumerate(self._data):
             if visited[i]:
@@ -48,6 +60,7 @@ class DBSCAN(object):
                 if len(neighbor_indices) < self._minPts:
                     # mark as noise
                     cluster_labels[i] = 'noise'
+                    noise_counter = noise_counter + 1
                 else:
                     # move up to next cluster
                     cluster_index = cluster_index + 1
@@ -56,8 +69,16 @@ class DBSCAN(object):
                     #-------------
                     cluster_labels,visited=expand_cluster(self._data,i,neighbor_indices,cluster_labels,cluster_index,self._eps,self._minPts,visited,self._metric)
 
-        self.cluster_labels = cluster_labels
 
+        self.cluster_labels = cluster_labels
+        if self._verbose:
+            print('Detected %i clusters'%cluster_index)
+            elapsed_time = timer() - start_time
+            elapsed_time = timedelta(seconds=elapsed_time)
+            print('Finished after ' + str(elapsed_time))
+            noise_rate = noise_counter/n_samples
+            print('Rate of noise in dataset: %f'%noise_rate)
+        self._n_clusters = cluster_index
 
 
 #------------
