@@ -1,3 +1,6 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+__metaclass__ = type
+
 from mcmm import analysis as ana, estimation as est, clustering as cl
 import numpy as np
 import pandas as pd
