@@ -2,6 +2,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 __metaclass__ = type
 import numpy as np
 from scipy.spatial import distance
+from timeit import default_timer as timer
+from datetime import timedelta
 
 class DBSCAN(object):
 
@@ -35,11 +37,16 @@ class DBSCAN(object):
         self._cluster_labels = value
 
     def fit(self):
+
+        if self._verbose:
+            start_time = timer()
+
         # initialize variables
         [n_samples,dim] = self._data.shape
         visited = np.zeros(n_samples,dtype=bool)
         cluster_labels = [None]*n_samples
         cluster_index = 0
+        noise_counter = 0
 
         for i,observation in enumerate(self._data):
             if visited[i]:
@@ -50,6 +57,7 @@ class DBSCAN(object):
                 if len(neighbor_indices) < self._minPts:
                     # mark as noise
                     cluster_labels[i] = 'noise'
+                    noise_counter = noise_counter + 1
                 else:
                     # move up to next cluster
                     cluster_index = cluster_index + 1
@@ -61,7 +69,12 @@ class DBSCAN(object):
 
         self.cluster_labels = cluster_labels
         if self._verbose:
-            print('detected %i clusters'%cluster_index)
+            print('Detected %i clusters'%cluster_index)
+            elapsed_time = timer() - start_time
+            elapsed_time = timedelta(seconds=elapsed_time)
+            print('Finished after ' + str(elapsed_time))
+            noise_rate = noise_counter/n_samples
+            print('Rate of noise in dataset: %f'%noise_rate)
         self._n_clusters = cluster_index
 
 
