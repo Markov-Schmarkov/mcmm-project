@@ -5,7 +5,7 @@ from scipy.spatial import distance
 
 class DBSCAN(object):
 
-    def __init__(self,data,eps,minPts,metric='euclidean'):
+    def __init__(self,data,eps,minPts,metric='euclidean',verbose=True):
         '''
 
         Args:
@@ -22,6 +22,8 @@ class DBSCAN(object):
         self._minPts = minPts
         self._cluster_labels = None
         self._metric = metric
+        self._n_clusters = None
+        self._verbose = verbose
 
     @property
     def cluster_labels(self):
@@ -56,8 +58,11 @@ class DBSCAN(object):
                     #-------------
                     cluster_labels,visited=expand_cluster(self._data,i,neighbor_indices,cluster_labels,cluster_index,self._eps,self._minPts,visited,self._metric)
 
-        self.cluster_labels = cluster_labels
 
+        self.cluster_labels = cluster_labels
+        if self._verbose:
+            print('detected %i clusters'%cluster_index)
+        self._n_clusters = cluster_index
 
 
 #------------
